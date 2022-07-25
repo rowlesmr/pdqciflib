@@ -10,6 +10,7 @@
 #include <cstddef>  // For std::ptrdiff_t
 #include <format>
 #include <algorithm>
+#include <utility>
 
 import util;
 
@@ -17,14 +18,14 @@ import util;
 export module ciffile;
 
 using dataname = std::string;
-using datavalue = std::vector<std::string>;
+using DataValue = std::vector<std::string>;
 using itemorder = std::variant<int, dataname>;
 
 template< typename K, typename V>
 using dict = std::unordered_map<K, V>;
 
 
-void print(const std::pair<dataname, datavalue>& kv) {
+void print(const std::pair<dataname, DataValue>& kv) {
 	if (kv.second.size() > 1) {
 		std::cout << kv.first << '\n';
 		for (const auto& v : kv.second) {
@@ -55,7 +56,6 @@ void print(const std::vector<T>& vs, bool newline = true) {
 export namespace row::cifstr {
 
 	using dataname = std::string;
-	using datavalue = std::vector<std::string>;
 	using itemorder = std::variant<int, dataname>;
 	using blockname = std::string;
 
@@ -63,9 +63,235 @@ export namespace row::cifstr {
 	using dict = std::unordered_map<K, V>;
 
 
+	class DataValue {
+	public:
+		using size_type = typename std::vector<std::string>::size_type;
+		using iterator = typename std::vector<std::string>::iterator;
+		using const_iterator = typename std::vector<std::string>::const_iterator;
+		using reverse_iterator = typename std::vector<std::string>::reverse_iterator;
+		using const_reverse_iterator = typename std::vector<std::string>::const_reverse_iterator;
+		using reference = typename std::vector<std::string>::reference;
+		using const_reference = typename std::vector<std::string>::const_reference;
+
+		using const_iterator_double = typename std::vector<double>::const_iterator;
+		using const_reverse_iterator_double = typename std::vector<double>::const_reverse_iterator;
+		using const_reference_double = typename std::vector<double>::const_reference;
+
+	private:
+		std::vector<std::string> m_strs{};
+		mutable std::vector<double> m_dbls{};
+		mutable std::vector<double> m_errs{};
+		mutable bool m_isConverted{ false };
+		
+	public:
+		DataValue() {}
+		DataValue(std::string in) : m_strs({ std::move(in) }) {}
+		DataValue(std::vector<std::string> in) : m_strs( std::move(in) ) {}
+		DataValue(std::initializer_list<std::string> in) : m_strs( std::move(in) ) {}
+
+
+		void convert() const {
+			if (m_isConverted){
+				return;
+			}
+
+			m_dbls.clear();
+			m_errs.clear();
+			m_dbls.reserve(m_strs.size());
+			m_errs.reserve(m_strs.size());
+
+			for (const auto& str : m_strs) {
+				auto [val, err] = row::util::stode(str);
+				m_dbls.push_back(val);
+				m_errs.push_back(err);
+			}
+
+			m_isConverted = true;
+			return;
+		}
+
+
+		void reconvert() {
+			m_isConverted = false;
+			return;
+		}
+
+
+		constexpr void assign(size_type count, const std::string& value) {
+			m_isConverted = false;
+			m_strs.assign(count, value);
+			return;
+		}
+
+		//element access
+		constexpr reference at(size_type pos) noexcept(false) {
+			return m_strs.at(pos);
+		}
+		constexpr const_reference at(size_type pos) const noexcept(false) {
+			return m_strs.at(pos);
+		}
+		constexpr reference str_at(size_type pos) noexcept(false) {
+			return at(pos);
+		}
+		constexpr const_reference str_at(size_type pos) const noexcept(false) {
+			return at(pos);
+		}
+		const_reference_double dbl_at(size_type pos) const noexcept(false) {
+			convert(); 
+			return m_dbls.at(pos);
+		}
+		const_reference_double err_at(size_type pos) const noexcept(false){
+			convert();
+			return m_errs.at(pos);
+		}
+
+		constexpr reference front() { return m_strs.front(); }
+		constexpr const_reference front() const { return m_strs.front(); }
+		constexpr reference front_str() { return front(); }
+		constexpr const_reference front_str() const { return front(); }
+		const_reference_double front_dbl() const { convert(); return m_dbls.front(); }
+		const_reference_double front_err() const { convert();  return m_errs.front(); }
+
+		constexpr reference back() { return m_strs.back(); }
+		constexpr const_reference back() const { return m_strs.back(); }
+		constexpr reference back_str() { return back(); }
+		constexpr const_reference back_str() const { return back(); }
+		const_reference_double back_dbl() const { convert(); return m_dbls.back(); }
+		const_reference_double back_err() const { convert(); return m_errs.back(); }
+
+
+		constexpr std::string* data() noexcept {
+			return m_strs.data();
+		}
+		constexpr const std::string* data() const noexcept {
+			return m_strs.data();
+		}
+		constexpr std::string* str_data() noexcept {
+			return data();
+		}
+		constexpr const std::string* str_data() const noexcept {
+			return data();
+		}
+		const double* dbl_data() const noexcept {
+			convert();
+			return m_dbls.data();
+		}
+		const double* err_data() const noexcept {
+			convert();
+			return m_errs.data();
+		}
+
+		//iterators
+		iterator begin() { return m_strs.begin(); };
+		iterator end() { return m_strs.end(); };
+		reverse_iterator rbegin() { return m_strs.rbegin(); };
+		reverse_iterator rend() { return m_strs.rend(); };
+
+		const_iterator begin() const { return m_strs.begin(); };
+		const_iterator end() const { return m_strs.end(); };
+		const_iterator cbegin() const { return m_strs.cbegin(); };
+		const_iterator cend() const { return m_strs.cend(); };
+		const_reverse_iterator crbegin() const { return m_strs.crbegin(); };
+		const_reverse_iterator crend() const { return m_strs.crend(); };
+
+		iterator str_begin() { return begin(); };
+		iterator str_end() { return end(); };
+		reverse_iterator str_rbegin() { return rbegin(); };
+		reverse_iterator str_rend() { return rend(); };
+
+		const_iterator str_begin() const { return begin(); };
+		const_iterator str_end() const { return end(); };
+		const_iterator str_cbegin() const { return cbegin(); };
+		const_iterator str_cend() const { return cend(); };
+		const_reverse_iterator str_crbegin() const { return crbegin(); };
+		const_reverse_iterator str_crend() const { return crend(); };
+
+		const_iterator_double dbl_begin() const { convert(); return m_dbls.begin(); };
+		const_iterator_double dbl_end() const { convert(); return m_dbls.end(); };
+		const_iterator_double dbl_cbegin() const { convert(); return m_dbls.cbegin(); };
+		const_iterator_double dbl_cend() const { convert(); return m_dbls.cend(); };
+		const_reverse_iterator_double dbl_crbegin() const { convert(); return m_dbls.crbegin(); };
+		const_reverse_iterator_double dbl_crend() const { convert(); return m_dbls.crend(); };
+
+		const_iterator_double err_begin() const { convert(); return m_errs.begin(); };
+		const_iterator_double err_end() const { convert(); return m_errs.end(); };
+		const_iterator_double err_cbegin() const { convert(); return m_errs.cbegin(); };
+		const_iterator_double err_cend() const { convert(); return m_errs.cend(); };
+		const_reverse_iterator_double err_crbegin() const { convert(); return m_errs.crbegin(); };
+		const_reverse_iterator_double err_crend() const { convert(); return m_errs.crend(); };
+
+
+		//capacity
+		[[nodiscard]] constexpr bool empty() const noexcept {
+			return m_strs.empty();
+		}
+		[[nodiscard]] constexpr bool isEmpty() const noexcept {
+			return empty();
+		}
+		constexpr size_type size() const noexcept {
+			return m_strs.size();
+		}
+		constexpr void reserve(size_type new_cap) {
+			m_strs.reserve(new_cap);
+			m_dbls.reserve(new_cap);
+			m_errs.reserve(new_cap);
+		}
+		constexpr size_type capacity() const noexcept {
+			return m_strs.capacity();
+		}
+		constexpr void shrink_to_fit() {
+			m_strs.shrink_to_fit();
+			m_dbls.shrink_to_fit();
+			m_errs.shrink_to_fit();
+		}
+
+		//modifiers
+		constexpr void clear() noexcept {
+			m_strs.clear();
+			m_dbls.clear();
+			m_errs.clear();
+			m_isConverted = false;
+			return;
+		}
+		void push_back(const std::string& value) {
+			m_isConverted = false;
+			m_strs.push_back(value);
+			return;
+		}
+		void push_back(std::string&& value) {
+			m_isConverted = false;
+			m_strs.push_back(std::forward<std::string>(value));
+			return;
+		}
+		reference emplace_back(std::string&& value) {
+			m_isConverted = false;
+			return m_strs.emplace_back(std::forward<std::string>(value));
+		}
+		constexpr void swap(DataValue& other) {
+			m_strs.swap(other.m_strs);
+			m_dbls.swap(other.m_dbls);
+			m_errs.swap(other.m_errs);
+			m_isConverted = other.m_isConverted;
+			return;
+		}
+
+
+		//"non"-member functions
+		friend constexpr bool operator==(const DataValue& lhs, const DataValue& rhs) {
+			return lhs.m_strs == rhs.m_strs;
+		}
+		friend constexpr auto operator<=>(const DataValue& lhs, const DataValue& rhs) {
+			return lhs.m_strs <=> rhs.m_strs;
+		}
+		friend constexpr void swap(DataValue& lhs, DataValue& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+			lhs.swap(rhs);
+		}
+	};
+
+
 	class Block {
 	private:
-		dict<dataname, datavalue> m_block{}; // this is the actual data
+		dict<dataname, DataValue> m_block{}; // this is the actual data
 		dict<int, std::vector<dataname>> m_loops{}; // keeps track of datanames that are looped together
 		std::vector<itemorder> m_item_order{}; // keeps the insertion order
 		dict<dataname, dataname> m_true_case{}; // keeps the actual case of the keys used.
@@ -122,7 +348,7 @@ export namespace row::cifstr {
 
 
 	public:
-		row::util::Success addItem(const dataname& key, const datavalue& value) {
+		row::util::Success addItem(const dataname& key, const DataValue& value) {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			if (!overwrite && this->contains(lowerKey)) {
@@ -141,7 +367,7 @@ export namespace row::cifstr {
 			return row::util::Success();
 		}
 
-		row::util::Success addItems(std::vector<dataname>& keys, std::vector<datavalue>& values) {
+		row::util::Success addItems(std::vector<dataname>& keys, std::vector<DataValue>& values) {
 			if (keys.size() != values.size()) {
 				return row::util::Success(2);
 			}
@@ -367,14 +593,14 @@ export namespace row::cifstr {
 
 					for (size_t i{ 0 }; i < m_block[m_loops[loopNum][0]].size(); ++i) {
 						for (const auto& key : m_loops[loopNum]) {
-							std::cout << '\t' << m_block[key][i];
+							std::cout << '\t' << m_block[key].at(i);
 						}
 						std::cout << '\n';
 					}
 				}
 				else {
 					std::string loopKey = std::get<std::string>(item);
-					std::cout << loopKey << '\t' << m_block[loopKey][0] << '\n';
+					std::cout << loopKey << '\t' << m_block[loopKey].at(0) << '\n';
 				}
 			}
 			std::cout << "---\n";
@@ -404,7 +630,7 @@ export namespace row::cifstr {
 			std::vector<size_t> lens(keys.size(), 0);
 			for (size_t i{ 0 }; i < lens.size(); ++i) {
 				const dataname& key = keys[i];
-				const datavalue& values = m_block.at(key);
+				const DataValue& values = m_block.at(key);
 				for (auto& val : values) {
 					lens[i] = std::max(lens[i], val.size());
 				}
@@ -414,7 +640,7 @@ export namespace row::cifstr {
 			size_t maxCol = keys.size();
 			for (size_t row{ 0 }; row < maxRow; ++row) {
 				for (size_t col{ 0 }; col < maxCol; ++col) {
-					const std::string& value = m_block.at(m_loops.at(loopNum)[col])[row];
+					const std::string& value = m_block.at(m_loops.at(loopNum)[col]).at(row);
 					const int pad = lens[col];
 					loop += std::format("\t{:{}}", pad, value);
 				}
@@ -503,11 +729,11 @@ export namespace row::cifstr {
 		{
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type = std::ptrdiff_t;
-			using value_type = std::pair<const dataname, datavalue>;
+			using value_type = std::pair<const dataname, DataValue>;
 			using pointer = value_type*;
 			using reference = value_type&;
-			using const_pointer = const std::pair<const dataname, datavalue>*;
-			using const_reference = const std::pair<const dataname, datavalue>&;
+			using const_pointer = const std::pair<const dataname, DataValue>*;
+			using const_reference = const std::pair<const dataname, DataValue>&;
 
 			ConstIterator(const_pointer m_ptr, const Block* blk)
 				: m_ptr{ m_ptr }, block{ blk } { }
@@ -629,30 +855,30 @@ export namespace row::cifstr {
 			if (s) { return 1; }
 			else { return 0; }
 		}
-		row::util::Success set(const dataname& key, const datavalue& value) {
+		row::util::Success set(const dataname& key, const DataValue& value) {
 			return addItem(key, value);
 		}
-		row::util::Success put(const dataname& key, const datavalue& value) {
+		row::util::Success put(const dataname& key, const DataValue& value) {
 			return set(key, value);
 		}
 
 
 		// Lookup
-		row::util::Success get(const dataname& key, datavalue& value) const {
+		row::util::Success get(const dataname& key, DataValue& value) const {
 			if (this->contains(key)) {
 				value = m_block.at(key);
 				return row::util::Success();
 			}
 			return row::util::Success(6);
 		}
-		const datavalue& at(const dataname& key) const {
+		const DataValue& at(const dataname& key) const {
 			return m_block.at(key);
 		}
 		size_t count(const dataname& key) const {
 			return m_block.count(key);
 		}
 		ConstIterator find(const dataname& key) const {
-			std::pair<const dataname, datavalue>* m_ptr = const_cast<std::pair<const dataname, datavalue>*>(&(*m_block.find(key)));
+			std::pair<const dataname, DataValue>* m_ptr = const_cast<std::pair<const dataname, DataValue>*>(&(*m_block.find(key)));
 			return ConstIterator(m_ptr, this);
 		}
 		bool contains(const dataname& key) const {
@@ -664,15 +890,15 @@ export namespace row::cifstr {
 			Block& map_;
 			dataname key_;
 			Result(Block& m, dataname k) : map_(m), key_(k) {}
-			operator datavalue () const { return map_.get_item_(key_); }
-			datavalue& operator = (datavalue rhs) {
+			operator DataValue () const { return map_.get_item_(key_); }
+			DataValue& operator = (DataValue rhs) {
 				return map_.set_item_(key_, rhs);
 			}
 		};
 		Result operator[](const dataname& key) {
 			return Result(*this, key);
 		}
-		datavalue operator[](dataname& key) const {
+		DataValue operator[](dataname& key) const {
 			return get_item_(key);
 		}
 
@@ -680,7 +906,7 @@ export namespace row::cifstr {
 
 	private:
 
-		std::pair<const dataname, datavalue>* ptrToFirstItem() {
+		std::pair<const dataname, DataValue>* ptrToFirstItem() {
 			itemorder firstItem = m_item_order[0];
 			dataname firstKey{};
 			if (firstItem.index() == 0) {
@@ -693,7 +919,7 @@ export namespace row::cifstr {
 			return &(*m_block.find(firstKey));
 		}
 
-		std::pair<const dataname, datavalue>* constptrToFirstItem() const {
+		std::pair<const dataname, DataValue>* constptrToFirstItem() const {
 			itemorder firstItem = m_item_order[0];
 			dataname firstKey{};
 			if (firstItem.index() == 0) {
@@ -703,15 +929,15 @@ export namespace row::cifstr {
 			else {
 				firstKey = std::get<dataname>(firstItem);
 			}
-			std::pair<const dataname, datavalue>* ptr = const_cast<std::pair<const dataname, datavalue>*>(&(*m_block.find(firstKey)));
+			std::pair<const dataname, DataValue>* ptr = const_cast<std::pair<const dataname, DataValue>*>(&(*m_block.find(firstKey)));
 			return ptr;
 		}
 
-		datavalue get_item_(const dataname& key) const {
+		DataValue get_item_(const dataname& key) const {
 			dataname lowerKey{ row::util::toLower(key) };
 			return m_block.at(lowerKey);
 		}
-		datavalue& set_item_(dataname key, datavalue value) {
+		DataValue& set_item_(dataname key, DataValue value) {
 			addItem(key, value);
 			dataname lowerKey{ row::util::toLower(key) };
 			return m_block[lowerKey];
