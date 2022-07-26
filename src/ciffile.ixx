@@ -90,9 +90,26 @@ export namespace row::cifstr {
 		DataValue(std::initializer_list<std::string> in) : m_strs( std::move(in) ) {}
 
 
-		void convert() const {
+		bool convert() const {
 			if (m_isConverted){
-				return;
+				return m_isConverted;
+			}
+
+			//test the first one. If it passes, assume the rest will.
+			if (m_strs.size()) {
+				auto [val, err] = row::util::stode(m_strs[0]);
+				if (val == row::util::NaN && err == row::util::NaN) {
+					m_isConverted = false;
+					m_dbls.clear();
+					m_errs.clear();
+					return m_isConverted;
+				}
+			}
+			else {
+				m_isConverted = false;
+				m_dbls.clear();
+				m_errs.clear();
+				return m_isConverted;
 			}
 
 			m_dbls.clear();
@@ -100,14 +117,14 @@ export namespace row::cifstr {
 			m_dbls.reserve(m_strs.size());
 			m_errs.reserve(m_strs.size());
 
-			for (const auto& str : m_strs) {
-				auto [val, err] = row::util::stode(str);
-				m_dbls.push_back(val);
-				m_errs.push_back(err);
+			for (const auto& s : m_strs) {
+				auto [val, err] = row::util::stode(s);
+				this->m_dbls.push_back(val);
+				this->m_errs.push_back(err);
 			}
 
 			m_isConverted = true;
-			return;
+			return m_isConverted;
 		}
 
 
@@ -117,7 +134,12 @@ export namespace row::cifstr {
 		}
 
 
-		constexpr void assign(size_type count, const std::string& value) {
+		bool isConverted() {
+			return m_isConverted;
+		}
+
+
+		constexpr void assign(size_type count, const std::string& value, int fgld) {
 			m_isConverted = false;
 			m_strs.assign(count, value);
 			return;

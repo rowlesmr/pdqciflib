@@ -2,10 +2,41 @@
 //
 
 #include <iostream>
+#include <string>
+#include <vector>
+
+import util;
+
+
 
 int main()
 {
+
+    std::vector<std::string> vals{ "13", "12.3", "-23", "+12.3", 
+        "13(4)", "23.4(5)", 
+        "123.4e2", "123.4e+2", "123.4e-2", 
+        "123.4e2(5)", "123.4e+2(6)", "123.4e-2(7)", 
+        "ThisIsString", ".", "?", "e", "(12)",
+        "-.3(2)", ".1"};
+
+    for (const auto& s : vals) {
+        auto [v, e] = row::util::stode(s);
+        std::cout << s<<'\t'<<v << " " << e << '\n';
+    }
+
+
+    //auto [v, e] = row::util::stode("123.4e+2(6)", 11);
+    //std::cout << v << " " << e << '\n';
+
+    //auto [vv, ee] = row::util::stode("ThisIsString",12);
+    //std::cout << vv << " " << ee << '\n';
+
+
+
+
+
     std::cout << "Hello World!\n";
+    std::cout << sizeof(char) << "\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
