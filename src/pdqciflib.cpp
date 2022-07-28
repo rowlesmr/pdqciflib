@@ -4,39 +4,55 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 import util;
+import ciffile;
+import cifparse;
 
-
+using namespace row::cif;
 
 int main()
 {
 
-    std::vector<std::string> vals{ "13", "12.3", "-23", "+12.3", 
-        "13(4)", "23.4(5)", 
-        "123.4e2", "123.4e+2", "123.4e-2", 
-        "123.4e2(5)", "123.4e+2(6)", "123.4e-2(7)", 
-        "ThisIsString", ".", "?", "e", "(12)",
-        "-.3(2)", ".1"};
 
-    for (const auto& s : vals) {
-        auto [v, e] = row::util::stode(s);
-        std::cout << s<<'\t'<<v << " " << e << '\n';
+
+    std::string file{ "C:\\Users\\184277j\\Documents\\GitHub\\pdqciflib\\pdqciflib\\data\\data.txt" };
+
+    try {
+        Cif cif = read_file(file);
+
+        cif.print_cif();
+        cif.print_block_order();
+        cif.print_true_case();
+
+        cif.getLastBlock().print_block();
+        cif.getLastBlock().print_loops();
+        cif.getLastBlock().print_item_order();
+        cif.getLastBlock().print_true_case();
+        std::cout  << "\n--\n\n--\n\n--\n\n--\n\n--\n\n--\n";
+        cif.getLastBlock().print();
+
+        //Datavalue dv{};
+        //cif.getLastBlock().get("_numeric", dv);
+
+        //std::vector<double> dbl = dv.get_dbls();
+
+        //std::cout << dbl.size() << "\n--\n";
+        //for (const auto& d : dbl) {
+        //    std::cout << d << '\n';
+        //}
+
+
     }
-
-
-    //auto [v, e] = row::util::stode("123.4e+2(6)", 11);
-    //std::cout << v << " " << e << '\n';
-
-    //auto [vv, ee] = row::util::stode("ThisIsString",12);
-    //std::cout << vv << " " << ee << '\n';
-
-
+    catch (std::runtime_error& e) {
+        std::cout << "caught\n";
+    }
 
 
 
     std::cout << "Hello World!\n";
-    std::cout << sizeof(char) << "\n";
+    //std::cout << sizeof(char) << "\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

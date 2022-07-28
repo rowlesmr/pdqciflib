@@ -17,25 +17,24 @@ import util;
 
 export module ciffile;
 
-using dataname = std::string;
-using DataValue = std::vector<std::string>;
-using itemorder = std::variant<int, dataname>;
+//using dataname = std::string;
+//using itemorder = std::variant<int, dataname>;
+//
+//template< typename K, typename V>
+//using dict = std::unordered_map<K, V>;
+//
 
-template< typename K, typename V>
-using dict = std::unordered_map<K, V>;
-
-
-void print(const std::pair<dataname, DataValue>& kv) {
-	if (kv.second.size() > 1) {
-		std::cout << kv.first << '\n';
-		for (const auto& v : kv.second) {
-			std::cout << '\t' << v << '\n';
-		}
-	}
-	else {
-		std::cout << kv.first << '\t' << kv.second[0] << '\n';
-	}
-}
+//void print(const std::pair<dataname, Datavalue>& kv) {
+//	if (kv.second.size() > 1) {
+//		std::cout << kv.first << '\n';
+//		for (const auto& v : kv.second) {
+//			std::cout << '\t' << v << '\n';
+//		}
+//	}
+//	else {
+//		std::cout << kv.first << '\t' << kv.second[0] << '\n';
+//	}
+//}
 
 template<typename T>
 void print(const T& v) {
@@ -53,7 +52,7 @@ void print(const std::vector<T>& vs, bool newline = true) {
 
 
 
-export namespace row::cifstr {
+export namespace row::cif {
 
 	using dataname = std::string;
 	using itemorder = std::variant<int, dataname>;
@@ -63,7 +62,7 @@ export namespace row::cifstr {
 	using dict = std::unordered_map<K, V>;
 
 
-	class DataValue {
+	class Datavalue {
 	public:
 		using size_type = typename std::vector<std::string>::size_type;
 		using iterator = typename std::vector<std::string>::iterator;
@@ -84,10 +83,33 @@ export namespace row::cifstr {
 		mutable bool m_isConverted{ false };
 		
 	public:
-		DataValue() {}
-		DataValue(std::string in) : m_strs({ std::move(in) }) {}
-		DataValue(std::vector<std::string> in) : m_strs( std::move(in) ) {}
-		DataValue(std::initializer_list<std::string> in) : m_strs( std::move(in) ) {}
+		Datavalue() {}
+		Datavalue(std::string in) : m_strs({ std::move(in) }) {}
+		Datavalue(std::vector<std::string> in) : m_strs( std::move(in) ) {}
+		Datavalue(std::initializer_list<std::string> in) : m_strs{ std::move(in) } { std::cout << "here\n"; }
+
+
+		const std::vector<std::string>& get_strings() const {
+			return m_strs;
+		}
+		const std::vector<double>& get_doubles() const {
+			convert();
+			return m_dbls;
+		}
+		const std::vector<double>& get_errors() const {
+			convert();
+			return m_errs;
+		}
+		const std::vector<std::string>& get_strs() const {
+			return get_strings();
+		}
+		const std::vector<double>& get_dbls() const {
+			return get_doubles();
+		}
+		const std::vector<double>& get_errs() const {
+			return get_errors();
+		}
+
 
 
 		bool convert() const {
@@ -289,7 +311,7 @@ export namespace row::cifstr {
 			m_isConverted = false;
 			return m_strs.emplace_back(std::forward<std::string>(value));
 		}
-		constexpr void swap(DataValue& other) {
+		constexpr void swap(Datavalue& other) {
 			m_strs.swap(other.m_strs);
 			m_dbls.swap(other.m_dbls);
 			m_errs.swap(other.m_errs);
@@ -298,14 +320,18 @@ export namespace row::cifstr {
 		}
 
 
+
+
+
+
 		//"non"-member functions
-		friend constexpr bool operator==(const DataValue& lhs, const DataValue& rhs) {
+		friend constexpr bool operator==(const Datavalue& lhs, const Datavalue& rhs) {
 			return lhs.m_strs == rhs.m_strs;
 		}
-		friend constexpr auto operator<=>(const DataValue& lhs, const DataValue& rhs) {
+		friend constexpr auto operator<=>(const Datavalue& lhs, const Datavalue& rhs) {
 			return lhs.m_strs <=> rhs.m_strs;
 		}
-		friend constexpr void swap(DataValue& lhs, DataValue& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+		friend constexpr void swap(Datavalue& lhs, Datavalue& rhs) noexcept(noexcept(lhs.swap(rhs))) {
 			lhs.swap(rhs);
 		}
 	};
@@ -313,7 +339,7 @@ export namespace row::cifstr {
 
 	class Block {
 	private:
-		dict<dataname, DataValue> m_block{}; // this is the actual data
+		dict<dataname, Datavalue> m_block{}; // this is the actual data
 		dict<int, std::vector<dataname>> m_loops{}; // keeps track of datanames that are looped together
 		std::vector<itemorder> m_item_order{}; // keeps the insertion order
 		dict<dataname, dataname> m_true_case{}; // keeps the actual case of the keys used.
@@ -370,11 +396,14 @@ export namespace row::cifstr {
 
 
 	public:
-		row::util::Success addItem(const dataname& key, const DataValue& value) {
+		Block() = default;
+		Block(bool ow) : overwrite(ow) {}
+
+		row::util::Success addItem(const dataname& key, const Datavalue& value) {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			if (!overwrite && this->contains(lowerKey)) {
-				return row::util::Success(1);
+				return row::util::Success(1, lowerKey);
 			}
 
 			if (!this->contains(lowerKey) && !this->isInLoop(lowerKey)) {
@@ -386,10 +415,11 @@ export namespace row::cifstr {
 			}
 			m_true_case[lowerKey] = key;
 			m_block[lowerKey] = value;
+
 			return row::util::Success();
 		}
 
-		row::util::Success addItems(std::vector<dataname>& keys, std::vector<DataValue>& values) {
+		row::util::Success addItems(const std::vector<dataname>& keys, const std::vector<Datavalue>& values) {
 			if (keys.size() != values.size()) {
 				return row::util::Success(2);
 			}
@@ -403,18 +433,40 @@ export namespace row::cifstr {
 			return row::util::Success();
 		}
 
+		row::util::Success addItemsAsLoop(const std::vector<dataname>& keys, const std::vector<Datavalue>& values) {
+			if (keys.size() != values.size()) {
+				return row::util::Success(2, keys.size() + " != " + values.size());
+			}
+
+			size_t len{ values[0].size()};
+			if (!(std::all_of(values.cbegin(), values.cend(), [len](const auto& value) { return value.size() == len; }))) {
+				return row::util::Success(4, "Expecting " + len);
+			}
+
+			for (size_t i = 0; i < keys.size(); ++i) {
+				row::util::Success s = addItem(keys[i], values[i]);
+				if (!s) {
+					return s;
+				}
+			}
+			return createLoop(keys);
+		}
+
 		row::util::Success createLoop(const std::vector<dataname>& keys) {
-			const auto& blk = m_block;
 			std::vector<dataname> lowerKeys{ row::util::toLower(keys) };
 
 			//check that all keys exist, and have all the same length values
-			if (!(std::all_of(lowerKeys.cbegin(), lowerKeys.cend(), [&blk](const auto& key) { return blk.contains(key); }))) {
-				return row::util::Success(3);
+			for (const auto& key : lowerKeys) {
+				if (!m_block.contains(key)) {
+					return row::util::Success(3, key);
+				}
 			}
 
-			size_t len{ m_block[keys[0]].size() };
-			if (!(std::all_of(lowerKeys.cbegin(), lowerKeys.cend(), [&blk, len](const auto& key) { return blk.at(key).size() == len; }))) {
-				return row::util::Success(4);
+			size_t len{ m_block[lowerKeys[0]].size() };
+			for (const auto& key : lowerKeys) {
+				if (m_block.at(key).size() != len) {
+					return row::util::Success(4, "Expecting " + len);
+				}
 			}
 
 			//remove all keys from any existing loops
@@ -438,7 +490,7 @@ export namespace row::cifstr {
 			int loopNum{ 1 };
 			if (m_loops.size() > 0) {
 				for (auto& [k, v] : m_loops) {
-					if (k > loopNum)
+					if (k >= loopNum)
 						loopNum = k + 1;
 				}
 			}
@@ -463,7 +515,6 @@ export namespace row::cifstr {
 			return row::util::Success();
 		}
 
-
 		row::util::Success addNameToLoop(const dataname& newName, const dataname& oldName) {
 			dataname lowerNew{ row::util::toLower(newName) };
 			dataname lowerOld{ row::util::toLower(oldName) };
@@ -471,7 +522,7 @@ export namespace row::cifstr {
 			if (!contains(lowerNew)) { return row::util::Success(3); }
 			if (m_block.at(lowerNew).size() != m_block.at(lowerOld).size()) { return row::util::Success(4); }
 
-			int loopNum = findLoop(oldName);
+			int loopNum = getLoopNum(oldName);
 			if (loopNum < 0) { return row::util::Success(5); }
 			if (row::util::contains(m_loops.at(loopNum), lowerNew)) { return row::util::Success(-1); }
 
@@ -488,8 +539,7 @@ export namespace row::cifstr {
 
 		}
 
-
-		int findLoop(const std::string& key) const {
+		int getLoopNum(const std::string& key) const {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			for (auto& [k, v] : m_loops) {
@@ -511,7 +561,7 @@ export namespace row::cifstr {
 		}
 
 		row::util::Success isInLoop(const dataname& key) const {
-			int r = findLoop(key);
+			int r = getLoopNum(key);
 
 			if (r != -1) {
 				return row::util::Success();
@@ -521,7 +571,6 @@ export namespace row::cifstr {
 			}
 		}
 
-
 		row::util::Success removeItem(const dataname& key) {
 			dataname lowerKey{ row::util::toLower(key) };
 
@@ -529,7 +578,7 @@ export namespace row::cifstr {
 				return row::util::Success(6);
 			}
 
-			int loopNum = findLoop(key);
+			int loopNum = getLoopNum(key);
 			m_block.erase(lowerKey);
 			m_true_case.erase(lowerKey);
 
@@ -547,7 +596,6 @@ export namespace row::cifstr {
 			return row::util::Success();
 		}
 
-
 		std::tuple<int, int> getItemPosition(const dataname& key) const {
 			/*A utility function to get the numerical order in the printout
 		of `key`.  An item has coordinate `(loop_no,pos)` with
@@ -564,13 +612,12 @@ export namespace row::cifstr {
 				return std::tuple<int, int> {-1, row::util::getIndexOf(m_item_order, tmp)};
 			}
 			else {
-				int loopNum = findLoop(lowerKey);
+				int loopNum = getLoopNum(lowerKey);
 				auto it = std::find(m_loops.at(loopNum).cbegin(), m_loops.at(loopNum).cend(), lowerKey);
 				int loopPos = it - m_loops.at(loopNum).cbegin();
 				return std::tuple<int, int> {loopNum, loopPos};
 			}
 		}
-
 
 		row::util::Success changeItemPosition(const dataname& key, const size_t newPosn) {
 			/*Move the printout order of `key` to `newpos`. If `key` is
@@ -592,7 +639,7 @@ export namespace row::cifstr {
 		row::util::Success changeLoopPosition(const dataname& key, const size_t newPosn) {
 			/*Move the printout order of the loop containing `key` to `newpos`.*/
 			dataname lowerKey{ row::util::toLower(key) };
-			int loopNum = findLoop(key);
+			int loopNum = getLoopNum(key);
 			if (loopNum < 0) {
 				return row::util::Success(5);
 			}
@@ -603,12 +650,68 @@ export namespace row::cifstr {
 			return row::util::Success();
 		}
 
+		std::vector<std::string> getInvalidLoopLengths() const {
+			std::vector<std::string> r{};
+			for (const auto& [k, vs] : m_loops) {
+				bool invalidLoopLength{ false };
+				size_t loopLen{vs[0].size()};
+				for (const auto& v : vs) {
+					if (v.size() != loopLen) {
+						invalidLoopLength = true;
+						break;
+					}
+				}
+				if (invalidLoopLength) {
+					r.insert(r.end(), vs.cbegin(), vs.cend());
+				}
+			}
+			return r;
+		}
+
+		row::util::Success set(const dataname& key, const Datavalue& value) {
+			return addItem(key, value);
+		}
+		row::util::Success put(const dataname& key, const Datavalue& value) {
+			return set(key, value);
+		}
+		row::util::Success get(const dataname& key, Datavalue& value) const {
+			if (this->contains(key)) {
+				value = m_block.at(key);
+				return row::util::Success();
+			}
+			return row::util::Success(6);
+		}
+
+
+		std::vector<dataname> getNames() const {
+			std::vector<dataname> names{};			
+			for (const auto& [k, _] : *this) {
+				names.push_back(k);
+			}
+			return names;
+		}
+		std::vector<dataname> keys() const {
+			return getNames();
+		}
+
+		std::vector<Datavalue> getValues() const {
+			std::vector<Datavalue> values{};
+			for (const auto& [_, v] : *this) {
+				values.push_back(v);
+			}
+			return values;
+		}
+		std::vector<Datavalue> values() const {
+			return getValues();
+		}
+
 
 		void print() {
 			std::cout << "---\n";
 			for (const auto& item : m_item_order) {
 				if (item.index() == 0) {
 					int loopNum = std::get<int>(item);
+					std::cout << "loop_\n";
 					for (const auto& key : m_loops[loopNum]) {
 						std::cout << '\t' << key << '\n';
 					}
@@ -627,7 +730,6 @@ export namespace row::cifstr {
 			}
 			std::cout << "---\n";
 		}
-
 
 		std::string printsection() {
 			size_t maxKeyLen{};
@@ -652,7 +754,7 @@ export namespace row::cifstr {
 			std::vector<size_t> lens(keys.size(), 0);
 			for (size_t i{ 0 }; i < lens.size(); ++i) {
 				const dataname& key = keys[i];
-				const DataValue& values = m_block.at(key);
+				const Datavalue& values = m_block.at(key);
 				for (auto& val : values) {
 					lens[i] = std::max(lens[i], val.size());
 				}
@@ -747,15 +849,16 @@ export namespace row::cifstr {
 		//};
 
 
+
 		struct ConstIterator
 		{
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type = std::ptrdiff_t;
-			using value_type = std::pair<const dataname, DataValue>;
+			using value_type = std::pair<const dataname, Datavalue>;
 			using pointer = value_type*;
 			using reference = value_type&;
-			using const_pointer = const std::pair<const dataname, DataValue>*;
-			using const_reference = const std::pair<const dataname, DataValue>&;
+			using const_pointer = const std::pair<const dataname, Datavalue>*;
+			using const_reference = const std::pair<const dataname, Datavalue>&;
 
 			ConstIterator(const_pointer m_ptr, const Block* blk)
 				: m_ptr{ m_ptr }, block{ blk } { }
@@ -823,6 +926,7 @@ export namespace row::cifstr {
 
 
 		//Iterators
+
 		//Iterator begin() noexcept {
 		//	return Iterator(ptrToFirstItem(), this);
 		//}
@@ -877,30 +981,16 @@ export namespace row::cifstr {
 			if (s) { return 1; }
 			else { return 0; }
 		}
-		row::util::Success set(const dataname& key, const DataValue& value) {
-			return addItem(key, value);
-		}
-		row::util::Success put(const dataname& key, const DataValue& value) {
-			return set(key, value);
-		}
-
 
 		// Lookup
-		row::util::Success get(const dataname& key, DataValue& value) const {
-			if (this->contains(key)) {
-				value = m_block.at(key);
-				return row::util::Success();
-			}
-			return row::util::Success(6);
-		}
-		const DataValue& at(const dataname& key) const {
+		const Datavalue& at(const dataname& key) const {
 			return m_block.at(key);
 		}
 		size_t count(const dataname& key) const {
 			return m_block.count(key);
 		}
 		ConstIterator find(const dataname& key) const {
-			std::pair<const dataname, DataValue>* m_ptr = const_cast<std::pair<const dataname, DataValue>*>(&(*m_block.find(key)));
+			std::pair<const dataname, Datavalue>* m_ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*m_block.find(key)));
 			return ConstIterator(m_ptr, this);
 		}
 		bool contains(const dataname& key) const {
@@ -912,23 +1002,22 @@ export namespace row::cifstr {
 			Block& map_;
 			dataname key_;
 			Result(Block& m, dataname k) : map_(m), key_(k) {}
-			operator DataValue () const { return map_.get_item_(key_); }
-			DataValue& operator = (DataValue rhs) {
+			operator Datavalue () const { return map_.get_item_(key_); }
+			Datavalue& operator = (Datavalue rhs) {
 				return map_.set_item_(key_, rhs);
 			}
 		};
 		Result operator[](const dataname& key) {
 			return Result(*this, key);
 		}
-		DataValue operator[](dataname& key) const {
+		Datavalue operator[](dataname& key) const {
 			return get_item_(key);
 		}
 
 
 
 	private:
-
-		std::pair<const dataname, DataValue>* ptrToFirstItem() {
+		std::pair<const dataname, Datavalue>* ptrToFirstItem() {
 			itemorder firstItem = m_item_order[0];
 			dataname firstKey{};
 			if (firstItem.index() == 0) {
@@ -941,7 +1030,7 @@ export namespace row::cifstr {
 			return &(*m_block.find(firstKey));
 		}
 
-		std::pair<const dataname, DataValue>* constptrToFirstItem() const {
+		std::pair<const dataname, Datavalue>* constptrToFirstItem() const {
 			itemorder firstItem = m_item_order[0];
 			dataname firstKey{};
 			if (firstItem.index() == 0) {
@@ -951,21 +1040,21 @@ export namespace row::cifstr {
 			else {
 				firstKey = std::get<dataname>(firstItem);
 			}
-			std::pair<const dataname, DataValue>* ptr = const_cast<std::pair<const dataname, DataValue>*>(&(*m_block.find(firstKey)));
+			std::pair<const dataname, Datavalue>* ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*m_block.find(firstKey)));
 			return ptr;
 		}
 
-		DataValue get_item_(const dataname& key) const {
+		Datavalue get_item_(const dataname& key) const {
 			dataname lowerKey{ row::util::toLower(key) };
 			return m_block.at(lowerKey);
 		}
-		DataValue& set_item_(dataname key, DataValue value) {
+		Datavalue& set_item_(dataname key, Datavalue value) {
 			addItem(key, value);
 			dataname lowerKey{ row::util::toLower(key) };
 			return m_block[lowerKey];
 		}
-
 	};
+
 
 	class Cif {
 	private:
@@ -973,13 +1062,14 @@ export namespace row::cifstr {
 		std::vector<blockname> m_block_order{}; // keeps the insertion order
 		dict<blockname, blockname> m_true_case{}; // keeps the actual case of the blocknames used.
 
+		std::string m_source{};
+		bool m_overwrite{ true };
 	public:
-		bool overwrite{ true };
 
 		//these print_* functions are for debugging purposes
 		void print_cif() const {
 			std::cout << "---\nCIF keys:\n";
-			for (auto& [k, _] : m_cif) {
+			for (const auto& [k, _] : m_cif) {
 				std::cout << k << '\n';
 			}
 			std::cout << "---\n";
@@ -987,7 +1077,7 @@ export namespace row::cifstr {
 
 		void print_block_order() const {
 			std::cout << "---\nBlock order:\n";
-			for (auto& block : m_block_order) {
+			for (const auto& block : m_block_order) {
 				std::cout << block << '\n';
 			}
 			std::cout << "---\n";
@@ -995,18 +1085,46 @@ export namespace row::cifstr {
 
 		void print_true_case() const {
 			std::cout << "---\nTrue case:\n";
-			for (auto& [k, v] : m_true_case) {
+			for (const auto& [k, v] : m_true_case) {
 				std::cout << k << " : " << v << ", ";
 			}
-			std::cout << "---\n";
+			std::cout << "\n---\n";
 		}
 
 
 	public:
+		Cif() {}
+		explicit Cif(std::string source) : m_source(std::move(source)) {}
+
+		Block& getLastBlock() {
+			return m_cif[m_block_order.back()];
+		}
+		const Block& getLastBlock() const {
+			return m_cif.at(m_block_order.back());
+		}
+
+		row::util::Success addName(const blockname& key) {
+			dataname lowerKey{ row::util::toLower(key) };
+
+			if (!m_overwrite && contains(lowerKey)) {
+				return row::util::Success(1);
+			}
+
+			if (!contains(lowerKey)) {
+				m_block_order.push_back(lowerKey);
+			}
+
+			m_true_case.erase(lowerKey);
+			m_true_case[lowerKey] = key;
+			m_cif[lowerKey];
+			m_cif[lowerKey].overwrite = m_overwrite;
+			return row::util::Success();
+		}
+
 		row::util::Success addBlock(const blockname& key, const Block& block) {
 			dataname lowerKey{ row::util::toLower(key) };
 
-			if (!overwrite && contains(lowerKey)) {
+			if (!m_overwrite && contains(lowerKey)) {
 				return row::util::Success(1);
 			}
 
@@ -1079,6 +1197,22 @@ export namespace row::cifstr {
 			row::util::move_element(m_block_order, oldPosn, newPosn);
 
 			return row::util::Success();
+		}
+
+		bool overwrite(bool ow) {
+			if (m_overwrite == ow) {
+				return m_overwrite == ow;
+			}
+			m_overwrite = ow;
+
+			for (auto& [_, block] : m_cif) {
+				block.overwrite = m_overwrite;
+			}
+			return m_overwrite;
+		}
+
+		bool canOverwrite() const {
+			return m_overwrite;
 		}
 
 
@@ -1225,7 +1359,7 @@ export namespace row::cifstr {
 			m_cif.clear();
 			m_block_order.clear();
 			m_true_case.clear();
-			overwrite = true;
+			m_overwrite = true;
 		}
 		size_t erase(const blockname& key) {
 			row::util::Success s = removeBlock(key);
@@ -1305,14 +1439,5 @@ export namespace row::cifstr {
 
 
 
-
-
 }
 
-
-
-
-
-
-
-export void MyFunc();
