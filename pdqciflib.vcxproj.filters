@@ -27,5 +27,8 @@
     <ClCompile Include="src\util.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pdqciflib.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

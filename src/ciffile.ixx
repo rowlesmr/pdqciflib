@@ -14,43 +14,7 @@
 
 import util;
 
-
 export module ciffile;
-
-//using dataname = std::string;
-//using itemorder = std::variant<int, dataname>;
-//
-//template< typename K, typename V>
-//using dict = std::unordered_map<K, V>;
-//
-
-//void print(const std::pair<dataname, Datavalue>& kv) {
-//	if (kv.second.size() > 1) {
-//		std::cout << kv.first << '\n';
-//		for (const auto& v : kv.second) {
-//			std::cout << '\t' << v << '\n';
-//		}
-//	}
-//	else {
-//		std::cout << kv.first << '\t' << kv.second[0] << '\n';
-//	}
-//}
-
-template<typename T>
-void print(const T& v) {
-	std::cout << v << '\n';
-}
-
-template<typename T>
-void print(const std::vector<T>& vs, bool newline = true) {
-	for (auto& v : vs) {
-		if (newline) { std::cout << v << '\n'; }
-		else { std::cout << v << '\t'; }
-	}
-	if (!newline) { std::cout << '\n'; }
-}
-
-
 
 export namespace row::cif {
 
@@ -149,17 +113,14 @@ export namespace row::cif {
 			return m_isConverted;
 		}
 
-
 		void reconvert() {
 			m_isConverted = false;
 			return;
 		}
 
-
-		bool isConverted() {
+		bool isConverted() const {
 			return m_isConverted;
 		}
-
 
 		constexpr void assign(size_type count, const std::string& value, int fgld) {
 			m_isConverted = false;
@@ -321,9 +282,6 @@ export namespace row::cif {
 
 
 
-
-
-
 		//"non"-member functions
 		friend constexpr bool operator==(const Datavalue& lhs, const Datavalue& rhs) {
 			return lhs.m_strs == rhs.m_strs;
@@ -393,17 +351,15 @@ export namespace row::cif {
 			std::cout << "---\n";
 		}
 
-
-
 	public:
 		Block() = default;
 		Block(bool ow) : overwrite(ow) {}
 
-		row::util::Success addItem(const dataname& key, const Datavalue& value) {
+		row::util::Success addItem(dataname key, Datavalue value) {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			if (!overwrite && this->contains(lowerKey)) {
-				return row::util::Success(1, lowerKey);
+				return row::util::Success(1);//, lowerKey);
 			}
 
 			if (!this->contains(lowerKey) && !this->isInLoop(lowerKey)) {
@@ -413,8 +369,8 @@ export namespace row::cif {
 			if (m_true_case.contains(lowerKey)) {
 				m_true_case.erase(lowerKey);
 			}
-			m_true_case[lowerKey] = key;
-			m_block[lowerKey] = value;
+			m_true_case.insert({ lowerKey, key });
+			m_block.insert({ std::move(lowerKey), std::move(value) });
 
 			return row::util::Success();
 		}
@@ -435,12 +391,12 @@ export namespace row::cif {
 
 		row::util::Success addItemsAsLoop(const std::vector<dataname>& keys, const std::vector<Datavalue>& values) {
 			if (keys.size() != values.size()) {
-				return row::util::Success(2, keys.size() + " != " + values.size());
+				return row::util::Success(2);//, keys.size() + " != " + values.size());
 			}
 
 			size_t len{ values[0].size()};
 			if (!(std::all_of(values.cbegin(), values.cend(), [len](const auto& value) { return value.size() == len; }))) {
-				return row::util::Success(4, "Expecting " + len);
+				return row::util::Success(4);//, "Expecting " + len);
 			}
 
 			for (size_t i = 0; i < keys.size(); ++i) {
@@ -458,14 +414,14 @@ export namespace row::cif {
 			//check that all keys exist, and have all the same length values
 			for (const auto& key : lowerKeys) {
 				if (!m_block.contains(key)) {
-					return row::util::Success(3, key);
+					return row::util::Success(3);//, key);
 				}
 			}
 
 			size_t len{ m_block[lowerKeys[0]].size() };
 			for (const auto& key : lowerKeys) {
 				if (m_block.at(key).size() != len) {
-					return row::util::Success(4, "Expecting " + len);
+					return row::util::Success(4);//, "Expecting " + len);
 				}
 			}
 
@@ -706,73 +662,73 @@ export namespace row::cif {
 		}
 
 
-		void print() {
-			std::cout << "---\n";
+		std::string makeStringLength( dataname tag, size_t len) const {
+			return std::format("{1:{0}}", len, std::move(tag));
+		}
+
+		std::string formatValue(std::string value) const {
+			if (value.find('\n') != std::string::npos) {
+				value = "\n;\n" + value + "\n;";
+			}
+			else if (value.find(' ') != std::string::npos) {
+				value = "\"" + value + "\"";
+			}
+			return value;
+		}
+
+		void print(bool pretty = true) const {
+			std::cout << to_string(pretty);
+		}
+
+		std::string to_string(bool pretty=true) const {
+			std::string block{};
+			size_t maxKeyLen{ 1 }; //must not be zero or std::format throws.
+
+			if (pretty) {
+				for (const auto& [k, _] : m_block) {
+					maxKeyLen = std::max(maxKeyLen, k.size());
+				}
+			}
+
 			for (const auto& item : m_item_order) {
-				if (item.index() == 0) {
-					int loopNum = std::get<int>(item);
-					std::cout << "loop_\n";
-					for (const auto& key : m_loops[loopNum]) {
-						std::cout << '\t' << key << '\n';
-					}
+				if (item.index() == 0) { // it's a loop
+					int loopNum{ std::get<int>(item) };
+					size_t loopLen{ m_block.at(m_loops.at(loopNum)[0]).size() };
+					size_t loopWidth{ m_loops.at(loopNum).size()};
 
-					for (size_t i{ 0 }; i < m_block[m_loops[loopNum][0]].size(); ++i) {
-						for (const auto& key : m_loops[loopNum]) {
-							std::cout << '\t' << m_block[key].at(i);
+					block += "loop_\n";
+					for (const auto& key : m_loops.at(loopNum)) {
+						block += "  " + key + '\n';
+					}
+					std::vector<size_t> colWidths(m_loops.at(loopNum).size(), 1); //must not be zero or std::format throws.
+
+					if (pretty) {
+						for (size_t j{ 0 }; j < loopWidth; ++j) {
+							for (size_t i{ 0 }; i < loopLen; ++i) {
+								const std::string& value{ m_block.at(m_loops.at(loopNum)[j]).at(i) };
+
+								if (value.find('\n') != std::string::npos) [[unlikely]] {
+									continue; //it's a semicolon textfield, and I don't want to mess with it's length.
+								}
+								colWidths[j] = std::max(colWidths[j], value.size());
+							}
 						}
-						std::cout << '\n';
+					}
+
+					for (size_t i{ 0 }; i < loopLen; ++i) {
+						for (size_t j{ 0 }; j < m_loops.at(loopNum).size(); ++j) {
+							const std::string& key{ m_loops.at(loopNum)[j] };
+							block += '\t' + makeStringLength(m_block.at(key).at(i), colWidths[j]);
+						}
+						block += '\n';
 					}
 				}
-				else {
-					std::string loopKey = std::get<std::string>(item);
-					std::cout << loopKey << '\t' << m_block[loopKey].at(0) << '\n';
+				else { // it's a plain dataitem
+					const std::string& loopKey = std::get<std::string>(item);
+					block += makeStringLength(loopKey, maxKeyLen) + '\t' + formatValue(m_block.at(loopKey).at(0)) + '\n';
 				}
 			}
-			std::cout << "---\n";
-		}
-
-		std::string printsection() {
-			size_t maxKeyLen{};
-			for (auto& item : m_item_order) {
-				if (item.index() == 0) {
-					continue;
-				}
-				maxKeyLen = std::max(maxKeyLen, std::get<dataname>(item).size());
-			}
-
-
-			return "";
-		}
-
-		std::string printLoop(int loopNum) const {
-			const std::vector<dataname>& keys = m_loops.at(loopNum);
-			std::string loop{ "loop_\n" };
-			for (auto& key : m_loops.at(loopNum)) {
-				loop += "  " + key;
-			}
-
-			std::vector<size_t> lens(keys.size(), 0);
-			for (size_t i{ 0 }; i < lens.size(); ++i) {
-				const dataname& key = keys[i];
-				const Datavalue& values = m_block.at(key);
-				for (auto& val : values) {
-					lens[i] = std::max(lens[i], val.size());
-				}
-			}
-
-			size_t maxRow = m_block.at(keys.at(0)).size();
-			size_t maxCol = keys.size();
-			for (size_t row{ 0 }; row < maxRow; ++row) {
-				for (size_t col{ 0 }; col < maxCol; ++col) {
-					const std::string& value = m_block.at(m_loops.at(loopNum)[col]).at(row);
-					const int pad = lens[col];
-					loop += std::format("\t{:{}}", pad, value);
-				}
-				loop += '\n';
-			}
-
-
-			return loop;
+			return block;
 		}
 
 
@@ -1103,11 +1059,16 @@ export namespace row::cif {
 			return m_cif.at(m_block_order.back());
 		}
 
+		const std::string& getSource() {
+			return m_source;
+		}
+
+
 		row::util::Success addName(const blockname& key) {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			if (!m_overwrite && contains(lowerKey)) {
-				return row::util::Success(1);
+				return row::util::Success(1);// , lowerKey);
 			}
 
 			if (!contains(lowerKey)) {
@@ -1125,7 +1086,7 @@ export namespace row::cif {
 			dataname lowerKey{ row::util::toLower(key) };
 
 			if (!m_overwrite && contains(lowerKey)) {
-				return row::util::Success(1);
+				return row::util::Success(1);//, lowerKey);
 			}
 
 			if (!contains(lowerKey)) {
@@ -1137,7 +1098,6 @@ export namespace row::cif {
 			m_cif[lowerKey] = block;
 			return row::util::Success();
 		}
-
 
 		row::util::Success addBlocks(std::vector<blockname>& keys, std::vector<Block>& blocks) {
 			if (keys.size() != blocks.size()) {
@@ -1153,7 +1113,6 @@ export namespace row::cif {
 			return row::util::Success();
 		}
 
-
 		row::util::Success removeBlock(const blockname& key) {
 			dataname lowerKey{ row::util::toLower(key) };
 
@@ -1167,7 +1126,6 @@ export namespace row::cif {
 
 			return row::util::Success();
 		}
-
 
 		int getBlockPosition(const dataname& key) const {
 			/*A utility function to get the numerical order in the printout
@@ -1184,7 +1142,6 @@ export namespace row::cif {
 				return row::util::getIndexOf(m_block_order, lowerKey);
 			}
 		}
-
 
 		row::util::Success changeBlockPosition(const dataname& key, const size_t newPosn) {
 			/*Move the printout order of `key` to `newpos`. If `key` is
@@ -1215,14 +1172,17 @@ export namespace row::cif {
 			return m_overwrite;
 		}
 
+		void print(bool pretty = true) const {
+			std::cout << to_string(pretty);
+		}
 
-		void print() {
-			std::cout << "---\n";
+		std::string to_string(bool pretty=true) const {
+			std::string cif{};
 			for (const auto& block : m_block_order) {
-				std::cout << block << '\n';
-				Block blk = m_cif.at(block); //this is here to throw
+				cif += "\ndata_" + block + '\n';
+				cif += m_cif.at(block).to_string(pretty);
 			}
-			std::cout << "---\n";
+			return cif;
 		}
 
 

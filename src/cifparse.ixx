@@ -7,7 +7,7 @@ import ciffile;
 
 export module cifparse;
 
-export namespace row::cif {
+namespace row::cif {
 
     namespace pegtl = tao::pegtl;
 
@@ -146,6 +146,7 @@ export namespace row::cif {
         std::vector<Datavalue> values{};
         size_t loopNum{};
         size_t maxLoop{};
+        size_t totalValues{};
 
         void initialiseValues() {
             if (values.size() == 0) {
@@ -157,6 +158,7 @@ export namespace row::cif {
         void appendValue(std::string val) {
             values[loopNum].push_back(val);
             loopNum = ++loopNum % maxLoop;
+            ++totalValues;
         }
 
         void clear() {
@@ -165,6 +167,7 @@ export namespace row::cif {
             values.clear();
             loopNum = 0;
             maxLoop = 0;
+            totalValues = 0;
         }
     };
 
@@ -214,7 +217,7 @@ export namespace row::cif {
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
                 Block& block = out.getLastBlock();
-                if (!block.addItem(buffer.tag, in.string())) {
+                if (!block.addItem(std::move(buffer.tag), in.string())) {
                     throw pegtl::parse_error("Duplicate tag found: " + buffer.tag, in);
                 }
                 status.just_printed();
@@ -255,16 +258,12 @@ export namespace row::cif {
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
             Block& block = out.getLastBlock();
                 
-            if (row::util::Success s = block.addItemsAsLoop(buffer.tags, buffer.values)) {}
+            if (row::util::Success s = block.addItemsAsLoop(std::move(buffer.tags), std::move(buffer.values))) {}
             else {
                 if (s.value() == 1)
                     throw pegtl::parse_error("Tag in loop already exists: " + s.message(), in);
                 if (s.value() == 4) {
-                    int totalValues{};
-                    for (const auto& v : buffer.values) {
-                        totalValues += v.size();
-                    }
-                    size_t should_be_zero = totalValues % buffer.tags.size();
+                    size_t should_be_zero = buffer.totalValues % buffer.tags.size();
                     std::string too_many{ std::to_string(should_be_zero) };
                     std::string too_few{ std::to_string(buffer.tags.size() - should_be_zero) };
                     throw pegtl::parse_error(too_few + " too few, or " + too_many + " too many values, in loop.", in);

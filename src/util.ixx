@@ -14,14 +14,14 @@ export namespace row::util {
 	class Success {
 	private:
 		int m_value{ };
-		std::string m_msg{};
+		//std::string m_msg{};
 
 	public:
 		constexpr Success() {}
 
 		constexpr Success(int value) : m_value(value) {}
 
-		constexpr Success(int value, std::string msg) : m_value(value), m_msg{ std::move(msg) } {}
+		//constexpr Success(int value, std::string msg) : m_value(value), m_msg{ std::move(msg) } {}
 
 		void assign(int value) noexcept {
 			m_value = value;
@@ -35,8 +35,8 @@ export namespace row::util {
 			return m_value;
 		}
 
-		const std::string& message() const noexcept {
-			return m_msg;
+		std::string message() const noexcept {
+			return "";
 		}
 
 		explicit operator bool() const noexcept {
