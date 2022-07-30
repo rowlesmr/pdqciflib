@@ -35,3 +35,5 @@
 .vs/
 data/
 x64/
+x64/Debug/pdqciflib.tlog/CL.read.1.tlog
+x64/Debug/pdqciflib.tlog/CL.write.1.tlog

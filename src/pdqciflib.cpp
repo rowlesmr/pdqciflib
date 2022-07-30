@@ -18,67 +18,77 @@ int main(int argc, char* argv[])
 {
 
 
-
-    //std::string file{ "C:\\Users\\184277j\\Documents\\GitHub\\pdqciflib\\pdqciflib\\data\\data.txt" };
-
-    //try {
-    //    Cif cif = read_file(file);
-
-    //    //cif.print_cif();
-    //    //cif.print_block_order();
-    //    //cif.print_true_case();
-
-    //    //cif.getLastBlock().print_block();
-    //    //cif.getLastBlock().print_loops();
-    //    //cif.getLastBlock().print_item_order();
-    //    //cif.getLastBlock().print_true_case();
-    //    //std::cout  << "\n--\n--\n--\n--\n--\n--\n";
-    //    cif.getLastBlock().print();
-
-    //    //Datavalue dv{};
-    //    //cif.getLastBlock().get("_numeric", dv);
-
-    //    //std::vector<double> dbl = dv.get_dbls();
-
-    //    //std::cout << dbl.size() << "\n--\n";
-    //    //for (const auto& d : dbl) {
-    //    //    std::cout << d << '\n';
-    //    //}
+ 
 
 
-    //}
-    //catch (std::runtime_error& e) {
-    //    std::cout << "caught\n";
-    //}
 
-    //int len{ 0 };
-    //std::string str{ "hi" };
-    //std::cout << std::format("'{1:{0}}'", len, str);
+    std::string file{ "C:\\Users\\184277j\\Documents\\GitHub\\pdqciflib\\pdqciflib\\data\\data.txt" };
 
-    //return 0;
+    try {
+        Cif cif = read_file(file);
+
+        //cif.print_cif();
+        //cif.print_block_order();
+        //cif.print_true_case();
+
+        //cif.getLastBlock().print_block();
+        //cif.getLastBlock().print_loops();
+        //cif.getLastBlock().print_item_order();
+        //cif.getLastBlock().print_true_case();
+        //std::cout  << "\n--\n--\n--\n--\n--\n--\n";
+        cif.print();
+
+        //Datavalue dv{};
+        //cif.getLastBlock().get("_numeric", dv);
+
+        //std::vector<double> dbl = dv.get_dbls();
+
+        //std::cout << dbl.size() << "\n--\n";
+        //for (const auto& d : dbl) {
+        //    std::cout << d << '\n';
+        //}
 
 
-    if (argc < 2) {
-        std::cout << "Command line arguments should be as follows :\n";
-        std::cout << "\tcifstr input_file [input_file ...] output_file\n";
-        return 0;
+    }
+    catch (std::runtime_error& e) {
+        std::cout << "caught\n";
     }
 
-    std::ofstream fout(argv[argc - 1]);
-    for (int i{ 1 }; i < argc - 1; ++i) {
-        std::string file{ argv[i] };
-        try {
-            //std::cout << std::format("\n--------------------\nNow reading {0}. Block(s):", file);
-            Cif cif = read_file(file);
-            //cif.getLastBlock().print();
-            cif.print(false);
-        }
-        catch (std::runtime_error& e) {
-            std::cout << "Probable parse error. Continuing...\n";
-        }
-    }
 
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //if (argc < 2) {
+    //    std::cout << "Command line arguments should be as follows :\n";
+    //    std::cout << "\tcifstr input_file [input_file ...] output_file\n";
+    //    return 0;
+    //}
+
+    //std::ofstream fout(argv[argc - 1]);
+    //for (int i{ 1 }; i < argc - 1; ++i) {
+    //    std::string file{ argv[i] };
+    //    try {
+    //        //std::cout << std::format("\n--------------------\nNow reading {0}. Block(s):", file);
+    //        Cif cif = read_file(file);
+    //        //cif.getLastBlock().print();
+    //        cif.print(false);
+    //    }
+    //    catch (std::runtime_error& e) {
+    //        std::cout << "Probable parse error. Continuing...\n";
+    //    }
+    //}
+
+    //
 
     std::cout << "Hello World!\n";
     //std::cout << sizeof(char) << "\n";

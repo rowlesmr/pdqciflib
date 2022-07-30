@@ -4,6 +4,7 @@
 #include "tao/pegtl.hpp"
 
 import ciffile;
+import cifexcept;
 
 export module cifparse;
 
@@ -147,6 +148,7 @@ namespace row::cif {
         size_t loopNum{};
         size_t maxLoop{};
         size_t totalValues{};
+        size_t tagNum{};
 
         void initialiseValues() {
             if (values.size() == 0) {
@@ -155,8 +157,12 @@ namespace row::cif {
             }
         }
 
+        void appendTag(std::string tag) {
+            tags.push_back(std::move(tag));
+            ++tagNum;
+        }
         void appendValue(std::string val) {
-            values[loopNum].push_back(val);
+            values[loopNum].push_back(std::move(val));
             loopNum = ++loopNum % maxLoop;
             ++totalValues;
         }
@@ -168,6 +174,7 @@ namespace row::cif {
             loopNum = 0;
             maxLoop = 0;
             totalValues = 0;
+            tagNum = 0;
         }
     };
 
@@ -190,10 +197,12 @@ namespace row::cif {
     template<typename Rule>
     struct Action : pegtl::nothing<Rule> {};
 
-    template<>
-    struct Action<rules::blockframecode> {
-        template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
-            if (!out.addName(in.string())) {
+    template<> struct Action<rules::blockframecode> {
+        template<typename Input> static void apply(const Input& in, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer) {
+            try {
+                out.addName(in.string());
+            }
+            catch (tag_already_exists_error& e) {
                 throw pegtl::parse_error("Duplicate blockcode found: " + in.string(), in);
             }
             status.reset();
@@ -201,13 +210,13 @@ namespace row::cif {
     };
 
     template<> struct Action<rules::saveframeheading> {
-        template<typename Input> static void apply(const Input& in, Cif&, Status&, Buffer&) {
+        template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif&, [[maybe_unused]] Status&, [[maybe_unused]] Buffer&) {
             throw pegtl::parse_error("Saveframes are not supported by this parser.", in);
         }
     };
 
     template<> struct Action<rules::itemtag> {
-        template<typename Input> static void apply(const Input& in, Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
+        template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
             buffer.clear();
             buffer.tag = in.string();
         }
@@ -217,8 +226,11 @@ namespace row::cif {
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
                 Block& block = out.getLastBlock();
-                if (!block.addItem(std::move(buffer.tag), in.string())) {
-                    throw pegtl::parse_error("Duplicate tag found: " + buffer.tag, in);
+                try {
+                    block.addItem(std::move(buffer.tag), in.string());
+                }
+                catch (tag_already_exists_error& e) {
+                    throw pegtl::parse_error("Duplicate tag found: " + in.string(), in);
                 }
                 status.just_printed();
             }
@@ -229,20 +241,20 @@ namespace row::cif {
     };
 
     template<> struct Action<rules::loopstart> {
-        template<typename Input> static void apply([[maybe_unused]] const Input& in, Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
+        template<typename Input> static void apply([[maybe_unused]] const Input& in, [[maybe_unused]] Cif& out, Status& status, Buffer& buffer) {
             buffer.clear();
             status.loop();
         }
     };
 
     template<> struct Action<rules::looptag> {
-        template<typename Input> static void apply(const Input& in, Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
-            buffer.tags.push_back(in.string());
+        template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
+            buffer.appendTag(in.string());
         }
     };
 
     template<> struct Action<rules::loopvalue> {
-        template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
+        template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& out, Status& status, Buffer& buffer) {
             buffer.initialiseValues();           
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
                 buffer.appendValue(in.string());                 
@@ -256,20 +268,19 @@ namespace row::cif {
 
     template<> struct Action<rules::loop> { //this is the end of a loop
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
-            Block& block = out.getLastBlock();
-                
-            if (row::util::Success s = block.addItemsAsLoop(std::move(buffer.tags), std::move(buffer.values))) {}
-            else {
-                if (s.value() == 1)
-                    throw pegtl::parse_error("Tag in loop already exists: " + s.message(), in);
-                if (s.value() == 4) {
-                    size_t should_be_zero = buffer.totalValues % buffer.tags.size();
-                    std::string too_many{ std::to_string(should_be_zero) };
-                    std::string too_few{ std::to_string(buffer.tags.size() - should_be_zero) };
-                    throw pegtl::parse_error(too_few + " too few, or " + too_many + " too many values, in loop.", in);
-                }
+            Block& block = out.getLastBlock();           
+            try {
+                block.addItemsAsLoop(std::move(buffer.tags), std::move(buffer.values));
             }
-
+            catch (const tag_already_exists_error& e) {
+                throw pegtl::parse_error("Tag in loop already exists", in);
+            }
+            catch (const loop_length_mismatch_error& e) {
+                size_t should_be_zero = buffer.totalValues % buffer.tagNum;
+                std::string too_many{ std::to_string(should_be_zero) };
+                std::string too_few{ std::to_string(buffer.tagNum - should_be_zero) };
+                throw pegtl::parse_error(too_few + " too few, or " + too_many + " too many, values in loop.", in);
+            }
             status.loop();
         }
     };
