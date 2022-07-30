@@ -30,5 +30,8 @@
     <ClCompile Include="pdqciflib.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cifexcept.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

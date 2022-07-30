@@ -11,49 +11,13 @@ export namespace row::util {
 
 
 
-	class Success {
-	private:
-		int m_value{ };
-		//std::string m_msg{};
-
-	public:
-		constexpr Success() {}
-
-		constexpr Success(int value) : m_value(value) {}
-
-		//constexpr Success(int value, std::string msg) : m_value(value), m_msg{ std::move(msg) } {}
-
-		void assign(int value) noexcept {
-			m_value = value;
-		}
-
-		void clear() noexcept {
-			m_value = 0;
-		}
-
-		int value() const noexcept {
-			return m_value;
-		}
-
-		std::string message() const noexcept {
-			return "";
-		}
-
-		explicit operator bool() const noexcept {
-			return (m_value <= 0);
-		}
-	};
-	bool operator==(const Success& lhs, const Success& rhs) noexcept {
-		return lhs.value() == rhs.value();
-	}
-	std::strong_ordering operator<=>(const Success& lhs, const Success& rhs) noexcept {
-		return lhs.value() <=> rhs.value();
-	}
-
 
 	std::string toLower(std::string str) {
 		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 		return str;
+	}
+	void toLower_i(std::string& str) {
+		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 	}
 
 
@@ -62,6 +26,11 @@ export namespace row::util {
 			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 		}
 		return strs;
+	}
+	void toLower_i(std::vector<std::string>& strs) {
+		for (std::string& str : strs) {
+			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+		}
 	}
 
 
@@ -122,8 +91,8 @@ export namespace row::util {
 		// then I know I've converted the entire string, and it is valid.
 		// I need to cast to void* to get around interpreting the char* as a string. I then reinterpret 
 		// the address as a long, so I can do maths with it.
-		unsigned long long beginning = reinterpret_cast<unsigned long long>(static_cast<const void*>(s));
-		int extraChar{ 0 };
+		unsigned long long beginning{ reinterpret_cast<unsigned long long>(static_cast<const void*>(s)) };
+		size_t extraChar{ 0 };
 
 		//get the sign of the double
 		if (c == '-') {
@@ -188,8 +157,9 @@ export namespace row::util {
 		//apply the correct sign to the value
 		v *= sgn;
 
-		unsigned long long end = reinterpret_cast<unsigned long long>(static_cast<const void*>(s));
-		unsigned long long numChars = extraChar + (end - beginning) / sizeof(char) - 1;
+		unsigned long long end{ reinterpret_cast<unsigned long long>(static_cast<const void*>(s)) };
+		size_t used_len{ static_cast<size_t>((end - beginning) / sizeof(char)) };
+		size_t numChars{ extraChar + used_len - 1 };
 
 		if (numChars != len) {
 			return std::pair<double, double>({ NaN, NaN });
