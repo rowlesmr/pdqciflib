@@ -202,7 +202,7 @@ namespace row::cif {
             try {
                 out.addName(in.string());
             }
-            catch (tag_already_exists_error& e) {
+            catch (tag_already_exists_error&) {
                 throw pegtl::parse_error("Duplicate blockcode found: " + in.string(), in);
             }
             status.reset();
@@ -229,7 +229,7 @@ namespace row::cif {
                 try {
                     block.addItem(std::move(buffer.tag), in.string());
                 }
-                catch (tag_already_exists_error& e) {
+                catch (tag_already_exists_error&) {
                     throw pegtl::parse_error("Duplicate tag found: " + in.string(), in);
                 }
                 status.just_printed();
@@ -272,10 +272,10 @@ namespace row::cif {
             try {
                 block.addItemsAsLoop(std::move(buffer.tags), std::move(buffer.values));
             }
-            catch (const tag_already_exists_error& e) {
+            catch (const tag_already_exists_error&) {
                 throw pegtl::parse_error("Tag in loop already exists", in);
             }
-            catch (const loop_length_mismatch_error& e) {
+            catch (const loop_length_mismatch_error&) {
                 size_t should_be_zero = buffer.totalValues % buffer.tagNum;
                 std::string too_many{ std::to_string(should_be_zero) };
                 std::string too_few{ std::to_string(buffer.tagNum - should_be_zero) };
@@ -333,6 +333,11 @@ namespace row::cif {
         return read_input(in, overwrite);
     }
 
+    //read a string into a Cif. Will throw std::runtime_error if it encounters problems
+    export Cif read_string(const std::string& cifstring, bool overwrite = false, const std::string& source = "string") noexcept(false) {
+        pegtl::string_input in(cifstring, source);
+        return read_input(in, overwrite);
+    }
 
 
 

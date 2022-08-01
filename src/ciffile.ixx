@@ -50,30 +50,6 @@ export namespace row::cif {
 		Datavalue(std::vector<std::string> in) : m_strs( std::move(in) ) {}
 		Datavalue(std::initializer_list<std::string> in) : m_strs{ std::move(in) } { std::cout << "here\n"; }
 
-
-		const std::vector<std::string>& get_strings() const {
-			return m_strs;
-		}
-		const std::vector<double>& get_doubles() const {
-			convert();
-			return m_dbls;
-		}
-		const std::vector<double>& get_errors() const {
-			convert();
-			return m_errs;
-		}
-		const std::vector<std::string>& get_strs() const {
-			return get_strings();
-		}
-		const std::vector<double>& get_dbls() const {
-			return get_doubles();
-		}
-		const std::vector<double>& get_errs() const {
-			return get_errors();
-		}
-
-
-
 		bool convert() const {
 			if (m_isConverted){
 				return m_isConverted;
@@ -120,11 +96,26 @@ export namespace row::cif {
 			return m_isConverted;
 		}
 
-		constexpr void assign(size_type count, const std::string& value, int fgld) {
-			m_isConverted = false;
-			m_strs.assign(count, value);
-			return;
+
+		//vector access
+		const std::vector<std::string>& getStrings() const {
+			return m_strs;
 		}
+		const std::vector<double>& getDoubles() const {
+			convert();
+			return m_dbls;
+		}
+		const std::vector<double>& getErrors() const {
+			convert();
+			return m_errs;
+		}
+
+
+		//constexpr void assign(size_type count, const std::string& value) {
+		//	m_isConverted = false;
+		//	m_strs.assign(count, value);
+		//	return;
+		//}
 
 		//element access
 		constexpr reference at(size_type pos) noexcept(false) {
@@ -148,6 +139,7 @@ export namespace row::cif {
 			return m_errs.at(pos);
 		}
 
+		// extereme iterators
 		constexpr reference front() { return m_strs.front(); }
 		constexpr const_reference front() const { return m_strs.front(); }
 		constexpr reference front_str() { return front(); }
@@ -163,6 +155,7 @@ export namespace row::cif {
 		const_reference_double back_err() const { convert(); return m_errs.back(); }
 
 
+		//data pointer
 		constexpr std::string* data() noexcept {
 			return m_strs.data();
 		}
@@ -192,6 +185,7 @@ export namespace row::cif {
 
 		const_iterator begin() const { return m_strs.begin(); };
 		const_iterator end() const { return m_strs.end(); };
+
 		const_iterator cbegin() const { return m_strs.cbegin(); };
 		const_iterator cend() const { return m_strs.cend(); };
 		const_reverse_iterator crbegin() const { return m_strs.crbegin(); };
@@ -238,6 +232,7 @@ export namespace row::cif {
 			m_strs.reserve(new_cap);
 			m_dbls.reserve(new_cap);
 			m_errs.reserve(new_cap);
+			return;
 		}
 		constexpr size_type capacity() const noexcept {
 			return m_strs.capacity();
@@ -246,6 +241,7 @@ export namespace row::cif {
 			m_strs.shrink_to_fit();
 			m_dbls.shrink_to_fit();
 			m_errs.shrink_to_fit();
+			return;
 		}
 
 		//modifiers
@@ -274,7 +270,7 @@ export namespace row::cif {
 			m_strs.swap(other.m_strs);
 			m_dbls.swap(other.m_dbls);
 			m_errs.swap(other.m_errs);
-			m_isConverted = other.m_isConverted;
+			std::swap(m_isConverted, other.m_isConverted);
 			return;
 		}
 
@@ -302,7 +298,7 @@ export namespace row::cif {
 		dict<dataname, Datavalue> m_block{}; // this is the actual data
 		dict<int, std::vector<dataname>> m_loops{}; // keeps track of datanames that are looped together
 		std::vector<itemorder> m_item_order{}; // keeps the insertion order
-		dict<dataname, dataname> m_true_case{}; // keeps the actual case of the keys used.
+		dict<dataname, dataname> m_true_case{}; // keeps the actual case of the tags used.
 
 	public:
 		bool overwrite{ true };
@@ -359,40 +355,40 @@ export namespace row::cif {
 		Block() = default;
 		Block(bool ow) : overwrite(ow) {}
 
-		ConstIterator addItem(dataname key, Datavalue value) noexcept(false) {
-			dataname lowerKey{ row::util::toLower(key) };
+		ConstIterator addItem(dataname tag, Datavalue value) noexcept(false) {
+			dataname lowerTag{ row::util::toLower(tag) };
 
-			if (!overwrite && contains(lowerKey)) {
-				throw tag_already_exists_error(lowerKey);
+			if (!overwrite && contains(lowerTag)) {
+				throw tag_already_exists_error(lowerTag);
 			}
 
-			if (!contains(lowerKey) && !isInLoop(lowerKey)) {
-				m_item_order.push_back(lowerKey);
+			if (!contains(lowerTag) && !isInLoop(lowerTag)) {
+				m_item_order.push_back(lowerTag);
 			}
 
-			if (m_true_case.contains(lowerKey)) {
-				m_true_case.erase(lowerKey);
+			if (m_true_case.contains(lowerTag)) {
+				m_true_case.erase(lowerTag);
 			}
-			m_true_case.insert({ lowerKey, key });
-			m_block.insert({ lowerKey, std::move(value) });
+			m_true_case.insert({ lowerTag, tag });
+			m_block.insert({ lowerTag, std::move(value) });
 
-			return find(lowerKey);
+			return find(lowerTag);
 		}
 
-		ConstIterator addItems(const std::vector<dataname>& keys, const std::vector<Datavalue>& values) noexcept(false) {
-			if (keys.size() != values.size()) {
-				throw tag_value_mismatch_error(std::format("{} keys and {} values", keys.size(), values.size()));
+		ConstIterator addItems(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
+			if (tags.size() != values.size()) {
+				throw tag_value_mismatch_error(std::format("{} tags and {} values", tags.size(), values.size()));
 			}
 
-			for (size_t i = 0; i < keys.size(); ++i) {
-				addItem(keys[i], values[i]);
+			for (size_t i = 0; i < tags.size(); ++i) {
+				addItem(tags[i], values[i]);
 			}
-			return find(row::util::toLower(keys[0]));
+			return find(row::util::toLower(tags[0]));
 		}
 
-		ConstIterator addItemsAsLoop(const std::vector<dataname>& keys, const std::vector<Datavalue>& values) noexcept(false) {
-			if (keys.size() != values.size()) {
-				throw tag_value_mismatch_error(std::format("{} keys and {} lots of values", keys.size(), values.size()));
+		ConstIterator addItemsAsLoop(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
+			if (tags.size() != values.size()) {
+				throw tag_value_mismatch_error(std::format("{} tags and {} lots of values", tags.size(), values.size()));
 			}
 
 			size_t len{ values[0].size()};
@@ -400,42 +396,42 @@ export namespace row::cif {
 				throw loop_length_mismatch_error("Different number of values per tag in loop");
 			}
 
-			for (size_t i = 0; i < keys.size(); ++i) {
-				addItem(keys[i], values[i]);
+			for (size_t i = 0; i < tags.size(); ++i) {
+				addItem(tags[i], values[i]);
 			}
-			return createLoop(keys);
+			return createLoop(tags);
 		}
 
-		ConstIterator createLoop(const std::vector<dataname>& keys) noexcept(false) {
-			std::vector<dataname> lowerKeys{ row::util::toLower(keys) };
+		ConstIterator createLoop(const std::vector<dataname>& tags) noexcept(false) {
+			std::vector<dataname> lowerTags{ row::util::toLower(tags) };
 
-			//check that all keys exist, and have all the same length values
-			for (const auto& key : lowerKeys) {
-				if (!m_block.contains(key)) {
-					throw no_such_tag_error(std::format("{} does not exist.", key));
+			//check that all tags exist, and have all the same length values
+			for (const auto& tag : lowerTags) {
+				if (!m_block.contains(tag)) {
+					throw no_such_tag_error(std::format("{} does not exist.", tag));
 				}
 			}
 
-			size_t len{ m_block[lowerKeys[0]].size() };
-			for (const auto& key : lowerKeys) {
-				if (m_block.at(key).size() != len) {
+			size_t len{ m_block[lowerTags[0]].size() };
+			for (const auto& tag : lowerTags) {
+				if (m_block.at(tag).size() != len) {
 					throw loop_length_mismatch_error("Different number of values per tag in loop");
 				}
 			}
 
-			//remove all keys from any existing loops
-			for (auto& [_, loopKeys] : m_loops) {
-				for (auto& key : lowerKeys) {
-					if (row::util::contains(loopKeys, key)) {
-						auto it = std::find(loopKeys.cbegin(), loopKeys.cend(), key);
-						loopKeys.erase(it);
+			//remove all tags from any existing loops
+			for (auto& [_, loopTags] : m_loops) {
+				for (auto& tag : lowerTags) {
+					if (row::util::contains(loopTags, tag)) {
+						auto it = std::find(loopTags.cbegin(), loopTags.cend(), tag);
+						loopTags.erase(it);
 					}
 				}
 			}
 
 			//remove empty loops
-			for (auto& [loopNum, loopKeys] : m_loops) {
-				if (loopKeys.size() == 0) {
+			for (auto& [loopNum, loopTags] : m_loops) {
+				if (loopTags.size() == 0) {
 					m_loops.erase(loopNum);
 				}
 			}
@@ -448,17 +444,17 @@ export namespace row::cif {
 						loopNum = k + 1;
 				}
 			}
-			m_loops[loopNum] = lowerKeys;
+			m_loops[loopNum] = lowerTags;
 			m_item_order.emplace_back(loopNum);
 
-			//remove keys from item order
-			for (auto& key : m_loops[loopNum]) {
+			//remove tags from item order
+			for (auto& tag : m_loops[loopNum]) {
 				auto it = m_item_order.begin();
 				while (it != m_item_order.end()) {
 					if (it->index() == 0) {
 						++it;
 					}
-					else if (std::get<std::string>(*it) == key) {
+					else if (std::get<std::string>(*it) == tag) {
 						it = m_item_order.erase(it);
 					}
 					else {
@@ -466,7 +462,7 @@ export namespace row::cif {
 					}
 				}
 			}
-			return find(lowerKeys[0]);
+			return find(lowerTags[0]);
 		}
 
 		ConstIterator addNameToLoop(const dataname& newName, const dataname& oldName) noexcept(false) {
@@ -493,45 +489,45 @@ export namespace row::cif {
 
 		}
 
-		int getLoopNum(const std::string& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
+		int getLoopNum(const std::string& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
 
 			for (auto& [k, v] : m_loops) {
-				if (row::util::contains(v, lowerKey)) {
+				if (row::util::contains(v, lowerTag)) {
 					return k;
 				}
 			}
 			return -1;
 		}
 
-		const std::vector<dataname>& getLoopNames(const dataname& key) const noexcept(false) {
+		const std::vector<dataname>& getLoopNames(const dataname& tag) const noexcept(false) {
 			for (auto& [_, vs] : m_loops) {
-				if (row::util::contains(vs, key)) {
+				if (row::util::contains(vs, tag)) {
 					return vs;
 				}
 			}
-			throw no_such_tag_error(std::format("{} does not exist in a loop.", key));
+			throw no_such_tag_error(std::format("{} does not exist in a loop.", tag));
 		}
 
-		bool isInLoop(const dataname& key) const {
-			return getLoopNum(key) != -1;
+		bool isInLoop(const dataname& tag) const {
+			return getLoopNum(tag) != -1;
 		}
 
-		ConstIterator removeItem(const dataname& key) {
-			dataname lowerKey{ row::util::toLower(key) };
+		ConstIterator removeItem(const dataname& tag) {
+			dataname lowerTag{ row::util::toLower(tag) };
 
-			if (!contains(lowerKey)) {
+			if (!contains(lowerTag)) {
 				return cend();
 			}
 
-			ConstIterator r = ++find(lowerKey);
+			ConstIterator r = ++find(lowerTag);
 
-			int loopNum{ getLoopNum(key) };
-			m_block.erase(lowerKey);
-			m_true_case.erase(lowerKey);
+			int loopNum{ getLoopNum(tag) };
+			m_block.erase(lowerTag);
+			m_true_case.erase(lowerTag);
 
 			if (loopNum > 0) {
-				std::erase(m_loops[loopNum], lowerKey);
+				std::erase(m_loops[loopNum], lowerTag);
 
 				if (m_loops[loopNum].size() == 0) {
 					m_loops.erase(loopNum);
@@ -539,63 +535,89 @@ export namespace row::cif {
 				}
 			}
 			else {
-				std::erase_if(m_item_order, [lowerKey](const auto& thing) { if (thing.index() == 1) { return std::get<std::string>(thing) == lowerKey; } else { return false; }});
+				std::erase_if(m_item_order, [lowerTag](const auto& thing) { if (thing.index() == 1) { return std::get<std::string>(thing) == lowerTag; } else { return false; }});
 			}
 			return r;
 		}
 
-		std::tuple<int, int> getItemPosition(const dataname& key) const {
+		Datavalue getAssociatedValue(const dataname& tag, const std::string& value, const dataname& associatedTag) {
+			dataname lowerTag{ row::util::toLower(tag) };
+			dataname lowerOther{ row::util::toLower(associatedTag) };
+			if (!contains(lowerTag)) {
+				throw no_such_tag_error(std::format("{} does not exist.", lowerTag));
+			}
+			if (!contains(lowerOther)) {
+				throw no_such_tag_error(std::format("{} does not exist.", lowerOther));
+			}
+			if (!isInLoop(lowerTag)) {
+				throw no_such_tag_error(std::format("{} does not exist in a loop.", lowerTag));
+			}
+			if (!isInLoop(lowerOther)) {
+				throw no_such_tag_error(std::format("{} does not exist in a loop.", lowerOther));
+			}
+			if (getLoopNum(lowerTag) != getLoopNum(lowerOther)) {
+				throw no_such_tag_error(std::format("{} does not exist in a loop with {}.", lowerOther, lowerTag));
+			}
+			
+			int i{ row::util::getIndexOf(get(tag).getStrings(), value)};
+
+			return Datavalue{ get(associatedTag).getStrings()[i] };
+
+		}
+
+
+		std::tuple<int, int> getItemPosition(const dataname& tag) const {
 			/*A utility function to get the numerical order in the printout
-		of `key`.  An item has coordinate `(loop_no,pos)` with
+		of `tag`.  An item has coordinate `(loop_no,pos)` with
 		the top level having a `loop_no` of -1.
 		Return -1, -1, indicates doesn't exist.
 		*/
-			dataname lowerKey{ row::util::toLower(key) };
+			dataname lowerTag{ row::util::toLower(tag) };
 
-			if (!contains(lowerKey)) {
+			if (!contains(lowerTag)) {
 				return std::tuple<int, int> {-1, -1};
 			}
-			itemorder tmp{ lowerKey };
+			itemorder tmp{ lowerTag };
 			if (row::util::contains(m_item_order, tmp)) {
 				return std::tuple<int, int> {-1, row::util::getIndexOf(m_item_order, tmp)};
 			}
 			else {
-				int loopNum = getLoopNum(lowerKey);
-				auto it = std::find(m_loops.at(loopNum).cbegin(), m_loops.at(loopNum).cend(), lowerKey);
-				int loopPos = it - m_loops.at(loopNum).cbegin();
+				int loopNum = getLoopNum(lowerTag);
+				auto it = std::find(m_loops.at(loopNum).cbegin(), m_loops.at(loopNum).cend(), lowerTag);
+				int loopPos = static_cast<int>(it - m_loops.at(loopNum).cbegin());
 				return std::tuple<int, int> {loopNum, loopPos};
 			}
 		}
 
-		ConstIterator changeItemPosition(const dataname& key, const size_t newPosn) {
-			/*Move the printout order of `key` to `newpos`. If `key` is
+		ConstIterator changeItemPosition(const dataname& tag, const size_t newPosn) {
+			/*Move the printout order of `tag` to `newpos`. If `tag` is
 				in a loop, `newpos` refers to the order within the loop.*/
-			dataname lowerKey{ row::util::toLower(key) };
-			if (!contains(lowerKey)) {
-				throw no_such_tag_error(std::format("{} does not exist.", key));
+			dataname lowerTag{ row::util::toLower(tag) };
+			if (!contains(lowerTag)) {
+				throw no_such_tag_error(std::format("{} does not exist.", tag));
 			}
-			auto [loopNum, oldPosn] = getItemPosition(key);
+			auto [loopNum, oldPosn] = getItemPosition(tag);
 			if (loopNum < 0) {
 				row::util::move_element(m_item_order, oldPosn, newPosn);
 			}
 			else {
 				row::util::move_element(m_loops[loopNum], oldPosn, newPosn);
 			}
-			return find(lowerKey);
+			return find(lowerTag);
 		}
 
-		ConstIterator changeLoopPosition(const dataname& key, const size_t newPosn) {
-			/*Move the printout order of the loop containing `key` to `newpos`.*/
-			dataname lowerKey{ row::util::toLower(key) };
-			int loopNum = getLoopNum(key);
+		ConstIterator changeLoopPosition(const dataname& tag, const size_t newPosn) {
+			/*Move the printout order of the loop containing `tag` to `newpos`.*/
+			dataname lowerTag{ row::util::toLower(tag) };
+			int loopNum = getLoopNum(tag);
 			if (loopNum < 0) {
-				throw no_such_tag_error(std::format("{} does not exist in a loop.", key));
+				throw no_such_tag_error(std::format("{} does not exist in a loop.", tag));
 			}
 
 			itemorder tmp{ loopNum };
 			row::util::move_element(m_item_order, row::util::getIndexOf(m_item_order, tmp), newPosn);
 
-			return find(lowerKey);
+			return find(lowerTag);
 		}
 
 		//why is this here?
@@ -617,18 +639,18 @@ export namespace row::cif {
 			return r;
 		}
 
-		ConstIterator set(const dataname& key, const Datavalue& value) {
-			return addItem(key, value);
+		ConstIterator set(const dataname& tag, const Datavalue& value) {
+			return addItem(tag, value);
 		}
-		ConstIterator put(const dataname& key, const Datavalue& value) {
-			return set(key, value);
+		ConstIterator put(const dataname& tag, const Datavalue& value) {
+			return set(tag, value);
 		}
-		const Datavalue& get(const dataname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			if (contains(lowerKey)) {
-				return m_block.at(lowerKey);
+		const Datavalue& get(const dataname& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
+			if (contains(lowerTag)) {
+				return m_block.at(lowerTag);
 			}
-			throw no_such_tag_error(std::format("{} does not exist.", lowerKey));
+			throw no_such_tag_error(std::format("{} does not exist.", lowerTag));
 		}
 
 
@@ -639,7 +661,7 @@ export namespace row::cif {
 			}
 			return names;
 		}
-		std::vector<dataname> keys() const {
+		std::vector<dataname> tags() const {
 			return getNames();
 		}
 
@@ -658,7 +680,7 @@ export namespace row::cif {
 
 
 
-		std::string makeStringLength( dataname tag, size_t len) const {
+		std::string makeStringLength(dataname tag, size_t len) const {
 			return std::format("{1:{0}}", len, std::move(tag));
 		}
 
@@ -666,7 +688,7 @@ export namespace row::cif {
 			if (value.find('\n') != std::string::npos) {
 				value = "\n;\n" + value + "\n;";
 			}
-			else if (value.find(' ') != std::string::npos) {
+			else if (value.find(' ') != std::string::npos || value[0] == '_') {
 				value = "\"" + value + "\"";
 			}
 			return value;
@@ -678,11 +700,11 @@ export namespace row::cif {
 
 		std::string to_string(bool pretty=true) const {
 			std::string block{};
-			size_t maxKeyLen{ 1 }; //must not be zero or std::format throws.
+			size_t maxTagLen{ 1 }; //must not be zero or std::format throws.
 
 			if (pretty) {
 				for (const auto& [k, _] : m_block) {
-					maxKeyLen = std::max(maxKeyLen, k.size());
+					maxTagLen = std::max(maxTagLen, k.size());
 				}
 			}
 
@@ -693,8 +715,8 @@ export namespace row::cif {
 					size_t loopWidth{ m_loops.at(loopNum).size()};
 
 					block += "loop_\n";
-					for (const auto& key : m_loops.at(loopNum)) {
-						block += "  " + key + '\n';
+					for (const auto& tag : m_loops.at(loopNum)) {
+						block += "  " + tag + '\n';
 					}
 					std::vector<size_t> colWidths(m_loops.at(loopNum).size(), 1); //must not be zero or std::format throws.
 
@@ -713,15 +735,15 @@ export namespace row::cif {
 
 					for (size_t i{ 0 }; i < loopLen; ++i) {
 						for (size_t j{ 0 }; j < m_loops.at(loopNum).size(); ++j) {
-							const std::string& key{ m_loops.at(loopNum)[j] };
-							block += '\t' + makeStringLength(m_block.at(key).at(i), colWidths[j]);
+							const std::string& tag{ m_loops.at(loopNum)[j] };
+							block += '\t' + makeStringLength(m_block.at(tag).at(i), colWidths[j]);
 						}
 						block += '\n';
 					}
 				}
 				else { // it's a plain dataitem
-					const std::string& loopKey = std::get<std::string>(item);
-					block += makeStringLength(loopKey, maxKeyLen) + '\t' + formatValue(m_block.at(loopKey).at(0)) + '\n';
+					const std::string& loopTag = std::get<std::string>(item);
+					block += makeStringLength(loopTag, maxTagLen) + '\t' + formatValue(m_block.at(loopTag).at(0)) + '\n';
 				}
 			}
 			return block;
@@ -746,19 +768,19 @@ export namespace row::cif {
 		//
 		//	// Prefix increment
 		//	Iterator& operator++() { 
-		//		dataname currentKey{ m_ptr->first };
-		//		auto [loopNum, posn] = block->getItemPosition(currentKey);
+		//		dataname currentTag{ m_ptr->first };
+		//		auto [loopNum, posn] = block->getItemPosition(currentTag);
 		//		itemorder nextItem{};
-		//		if (loopNum < 0) { // currentKey is not a loop
+		//		if (loopNum < 0) { // currentTag is not a loop
 		//			if (posn < block->m_item_order.size() - 1) { // not at the end of the item_order
 		//				nextItem = block->m_item_order[++posn];
 		//				if (nextItem.index() == 0) { // the nextkey is the start of a loop
-		//					currentKey = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
+		//					currentTag = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
 		//				}
 		//				else { //the next key is just a key
-		//					currentKey = std::get<dataname>(nextItem); //update the keyname
+		//					currentTag = std::get<dataname>(nextItem); //update the keyname
 		//				}
-		//				m_ptr = &(*block->m_block.find(currentKey));
+		//				m_ptr = &(*block->m_block.find(currentTag));
 		//			}
 		//			else {
 		//				m_ptr = nullptr;
@@ -766,20 +788,20 @@ export namespace row::cif {
 		//		}
 		//		else {  //we're in a loop
 		//			if (posn < block->m_loops[loopNum].size() - 1) { // not at the end of the loop
-		//				currentKey = block->m_loops[loopNum][++posn];
-		//				m_ptr = &(*block->m_block.find(currentKey));
+		//				currentTag = block->m_loops[loopNum][++posn];
+		//				m_ptr = &(*block->m_block.find(currentTag));
 		//			}
 		//			else { //we're at the end of a loop and need to look at the next element
 		//				int currentIndex = row::util::getIndexOf(block->m_item_order, std::variant<int, dataname>{loopNum});
 		//				if (currentIndex < block->m_item_order.size() - 1) { // we can go to the next element
 		//					nextItem = block->m_item_order[++currentIndex];
 		//					if (nextItem.index() == 0) { // the nextkey is the start of a loop
-		//						currentKey = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
+		//						currentTag = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
 		//					}
 		//					else { //the next key is just a key
-		//						currentKey = std::get<dataname>(nextItem); //update the keyname
+		//						currentTag = std::get<dataname>(nextItem); //update the keyname
 		//					}
-		//					m_ptr = &(*block->m_block.find(currentKey));
+		//					m_ptr = &(*block->m_block.find(currentTag));
 		//				}
 		//				else {
 		//					m_ptr = nullptr;
@@ -801,10 +823,11 @@ export namespace row::cif {
 		//};
 
 
-
+		//// taken from https://www.internalpointers.com/post/writing-custom-iterators-modern-cpp
 		struct ConstIterator
 		{
-			using iterator_category = std::forward_iterator_tag;
+		public:		
+			using iterator_category = std::bidirectional_iterator_tag;
 			using difference_type = std::ptrdiff_t;
 			using value_type = std::pair<const dataname, Datavalue>;
 			using pointer = value_type*;
@@ -812,6 +835,11 @@ export namespace row::cif {
 			using const_pointer = const std::pair<const dataname, Datavalue>*;
 			using const_reference = const std::pair<const dataname, Datavalue>&;
 
+		private:
+			const_pointer m_ptr;
+			const Block* block;
+		
+		public:
 			ConstIterator(const_pointer m_ptr, const Block* blk)
 				: m_ptr{ m_ptr }, block{ blk } { }
 
@@ -820,19 +848,30 @@ export namespace row::cif {
 
 			// Prefix increment
 			ConstIterator& operator++() {
-				dataname currentKey{ m_ptr->first };
-				auto [loopNum, posn] = block->getItemPosition(currentKey);
+				dataname currentTag{  };
+
+				//what is ++end()? It should be begin();
+				if (!m_ptr) { //ie, increment end();
+					size_t numItems{ block->m_item_order.size() };
+					itemorder lastItem{ block->m_item_order[numItems - 1] };
+					if (lastItem.index() == 0) { // the lastItem is the start of a loop
+						size_t numTags{ block->m_loops.at(std::get<int>(lastItem)).size() };
+						currentTag = block->m_loops.at(std::get<int>(lastItem))[numTags - 1];//update the tagname
+					}
+					else { //the next tag is just a tag
+						currentTag = std::get<dataname>(lastItem); //update the tagname
+					}
+					m_ptr = &(*block->m_block.find(currentTag));
+					return *this;
+				}
+
+
+				currentTag = m_ptr->first;
+				auto [loopNum, posn] = block->getItemPosition(currentTag);
 				itemorder nextItem{};
-				if (loopNum < 0) { // currentKey is not a loop
+				if (loopNum < 0) { // currentTag is not a loop
 					if (posn < block->m_item_order.size() - 1) { // not at the end of the item_order
-						nextItem = block->m_item_order[++posn];
-						if (nextItem.index() == 0) { // the nextkey is the start of a loop
-							currentKey = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
-						}
-						else { //the next key is just a key
-							currentKey = std::get<dataname>(nextItem); //update the keyname
-						}
-						m_ptr = &(*block->m_block.find(currentKey));
+						m_ptr = nextPtr(posn, currentTag);
 					}
 					else {
 						m_ptr = nullptr;
@@ -840,20 +879,13 @@ export namespace row::cif {
 				}
 				else {  //we're in a loop
 					if (posn < block->m_loops.at(loopNum).size() - 1) { // not at the end of the loop
-						currentKey = block->m_loops.at(loopNum)[++posn];
-						m_ptr = const_cast<pointer>(&(*block->m_block.find(currentKey)));
+						currentTag = block->m_loops.at(loopNum)[++posn];
+						m_ptr = const_cast<pointer>(&(*block->m_block.find(currentTag)));
 					}
 					else { //we're at the end of a loop and need to look at the next element
 						int currentIndex = row::util::getIndexOf(block->m_item_order, std::variant<int, dataname>{ loopNum });
 						if (currentIndex < block->m_item_order.size() - 1) { // we can go to the next element
-							nextItem = block->m_item_order[++currentIndex];
-							if (nextItem.index() == 0) { // the nextkey is the start of a loop
-								currentKey = block->m_loops.at(std::get<int>(nextItem))[0];//update the keyname
-							}
-							else { //the next key is just a key
-								currentKey = std::get<dataname>(nextItem); //update the keyname
-							}
-							m_ptr = const_cast<pointer>(&(*block->m_block.find(currentKey)));
+							m_ptr = nextPtr(currentIndex, currentTag);
 						}
 						else {
 							m_ptr = nullptr;
@@ -863,16 +895,83 @@ export namespace row::cif {
 				return *this;
 			}
 
-			// Postfix increment
+			// Prefix decrement
+			ConstIterator& operator--() {
+
+				dataname currentTag{};
+				// what is --end()? It should be begin();
+				if (!m_ptr) { //ie, decrement end();
+					itemorder firstItem{ block->m_item_order[0] };
+					if (firstItem.index() == 0) { // the firstTag is the start of a loop
+						currentTag = block->m_loops.at(std::get<int>(firstItem))[0];//update the tagname
+					}
+					else { //the next tag is just a tag
+						currentTag = std::get<dataname>(firstItem); //update the tagname
+					}
+					m_ptr = &(*block->m_block.find(currentTag));
+					return *this;
+				}
+
+				currentTag = m_ptr->first;
+				auto [loopNum, posn] = block->getItemPosition(currentTag);
+				if (loopNum < 0) { // currentTag is not a loop
+					if (posn > 0) { // not at the beginning of the item_order
+						m_ptr = prevPtr(posn, currentTag);
+					}
+					else {
+						m_ptr = nullptr;
+					}
+				}
+				else {  //we're in a loop
+					if (posn > 0) { // not at the beginning of the loop
+						currentTag = block->m_loops.at(loopNum)[--posn];
+						m_ptr = &(*block->m_block.find(currentTag));
+					}
+					else { //we're at the beginning of a loop and need to look at the next element
+						int currentIndex{ row::util::getIndexOf(block->m_item_order, std::variant<int, dataname>{ loopNum }) };
+						if (currentIndex < 0) { // we can go to the previous element
+							m_ptr = prevPtr(currentIndex, currentTag);
+						}
+						else {
+							m_ptr = nullptr;
+						}
+					}
+				}
+				return *this;
+			}
+
+			// Postfix increment/decrement
 			ConstIterator operator++(int) { ConstIterator tmp = *this; ++(*this); return tmp; }
+			ConstIterator operator--(int) { ConstIterator tmp = *this; --(*this); return tmp; }
 
 			friend bool operator== (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr == b.m_ptr; };
 			friend bool operator!= (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr != b.m_ptr; };
 
-
 		private:
-			const_pointer m_ptr;
-			const Block* block;
+			const_pointer getPtr(size_t idx, dataname& currentTag) {
+				itemorder item{ block->m_item_order[idx] };
+				if (item.index() == 0) { // the prevTag is the start of a loop
+					size_t numTags{ block->m_loops.at(std::get<int>(item)).size() };
+					currentTag = block->m_loops.at(std::get<int>(item))[numTags - 1];//update the tagname
+				}
+				else { //the next tag is just a tag
+					currentTag = std::get<dataname>(item); //update the tagname
+				}
+				return &(*block->m_block.find(currentTag));
+			}
+
+			const_pointer prevPtr(size_t currIndex, dataname& currentTag) {
+				return getPtr(--currIndex, currentTag);
+			}
+
+			const_pointer nextPtr(size_t currIndex, dataname& currentTag) {
+				return getPtr(++currIndex, currentTag);
+			}
+
+
+
+
+
 		};
 
 
@@ -910,9 +1009,9 @@ export namespace row::cif {
 		size_t size() const noexcept {
 			return m_block.size();
 		}
-		int size(const dataname& key) const noexcept {
-			if (contains(key)) {
-				return m_block.at(key).size();
+		int size(const dataname& tag) const noexcept {
+			if (contains(tag)) {
+				return static_cast<int>(m_block.at(tag).size());
 			}
 			return -1;
 		}
@@ -928,8 +1027,8 @@ export namespace row::cif {
 			m_true_case.clear();
 			overwrite = true;
 		}
-		size_t erase(const dataname& key) {
-			ConstIterator r = removeItem(key);
+		size_t erase(const dataname& tag) {
+			ConstIterator r = removeItem(tag);
 			if (r == this->cend())
 				return 0;
 			else
@@ -937,18 +1036,18 @@ export namespace row::cif {
 		}
 
 		// Lookup
-		const Datavalue& at(const dataname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_block.at(lowerKey);
+		const Datavalue& at(const dataname& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
+			return m_block.at(lowerTag);
 		}
-		size_t count(const dataname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_block.count(lowerKey);
+		size_t count(const dataname& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
+			return m_block.count(lowerTag);
 		}
-		ConstIterator find(const dataname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
+		ConstIterator find(const dataname& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
 
-			auto it = m_block.find(lowerKey);
+			auto it = m_block.find(lowerTag);
 			if (it == m_block.end()) {
 				return cend();
 			}
@@ -956,9 +1055,9 @@ export namespace row::cif {
 			std::pair<const dataname, Datavalue>* m_ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*it));
 			return ConstIterator(m_ptr, this);
 		}
-		bool contains(const dataname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_block.contains(lowerKey);
+		bool contains(const dataname& tag) const {
+			dataname lowerTag{ row::util::toLower(tag) };
+			return m_block.contains(lowerTag);
 		}
 
 
@@ -966,28 +1065,28 @@ export namespace row::cif {
 	private:
 		std::pair<const dataname, Datavalue>* ptrToFirstItem() {
 			itemorder firstItem = m_item_order[0];
-			dataname firstKey{};
+			dataname firstTag{};
 			if (firstItem.index() == 0) {
 				int loopNum = std::get<int>(firstItem);
-				firstKey = m_loops.at(loopNum)[0];
+				firstTag = m_loops.at(loopNum)[0];
 			}
 			else {
-				firstKey = std::get<dataname>(firstItem);
+				firstTag = std::get<dataname>(firstItem);
 			}
-			return &(*m_block.find(firstKey));
+			return &(*m_block.find(firstTag));
 		}
 
 		std::pair<const dataname, Datavalue>* constptrToFirstItem() const {
 			itemorder firstItem = m_item_order[0];
-			dataname firstKey{};
+			dataname firstTag{};
 			if (firstItem.index() == 0) {
 				int loopNum = std::get<int>(firstItem);
-				firstKey = m_loops.at(loopNum)[0];
+				firstTag = m_loops.at(loopNum)[0];
 			}
 			else {
-				firstKey = std::get<dataname>(firstItem);
+				firstTag = std::get<dataname>(firstItem);
 			}
-			std::pair<const dataname, Datavalue>* ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*m_block.find(firstKey)));
+			std::pair<const dataname, Datavalue>* ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*m_block.find(firstTag)));
 			return ptr;
 		}
 	};
@@ -1008,7 +1107,7 @@ export namespace row::cif {
 
 		//these print_* functions are for debugging purposes
 		void print_cif() const {
-			std::cout << "---\nCIF keys:\n";
+			std::cout << "---\nCIF tags:\n";
 			for (const auto& [k, _] : m_cif) {
 				std::cout << k << '\n';
 			}
@@ -1048,94 +1147,92 @@ export namespace row::cif {
 		}
 
 
-		Block& addName(const blockname& key) noexcept(false) {
-			dataname lowerKey{ row::util::toLower(key) };
+		Block& addName(const blockname& name) noexcept(false) {
+			dataname lowerTag{ row::util::toLower(name) };
 
-			if (!canOverwrite() && contains(lowerKey)) {
-				throw tag_already_exists_error(lowerKey);
+			if (!canOverwrite() && contains(lowerTag)) {
+				throw tag_already_exists_error(lowerTag);
 			}
 
-			if (!contains(lowerKey)) {
-				m_block_order.push_back(lowerKey);
+			if (!contains(lowerTag)) {
+				m_block_order.push_back(lowerTag);
 			}
 
-			m_true_case.erase(lowerKey);
-			m_true_case[lowerKey] = key;
-			m_cif[lowerKey];
-			m_cif[lowerKey].overwrite = m_overwrite;
-			return m_cif[lowerKey];
+			m_true_case.erase(lowerTag);
+			m_true_case[lowerTag] = name;
+			m_cif[lowerTag];
+			m_cif[lowerTag].overwrite = m_overwrite;
+			return m_cif[lowerTag];
 		}
 
-		ConstIterator addBlock(const blockname& key, const Block& block) noexcept(false) {
-			dataname lowerKey{ row::util::toLower(key) };
+		ConstIterator addBlock(const blockname& name, const Block& block) noexcept(false) {
+			dataname lowerTag{ row::util::toLower(name) };
 
-			if (!canOverwrite() && contains(lowerKey)) {
-				throw tag_already_exists_error(lowerKey);
+			if (!canOverwrite() && contains(lowerTag)) {
+				throw tag_already_exists_error(lowerTag);
 			}
 
-			if (!contains(lowerKey)) {
-				m_block_order.push_back(lowerKey);
+			if (!contains(lowerTag)) {
+				m_block_order.push_back(lowerTag);
 			}
 
-			m_true_case.erase(lowerKey);
-			m_true_case[lowerKey] = key;
-			m_cif[lowerKey] = block;
-			return find(lowerKey);
+			m_true_case.erase(lowerTag);
+			m_true_case[lowerTag] = name;
+			m_cif[lowerTag] = block;
+			return find(lowerTag);
 		}
 
-		ConstIterator addBlocks(const std::vector<blockname>& keys, const std::vector<Block>& blocks) {
-			if (keys.size() != blocks.size()) {
-				throw tag_value_mismatch_error(std::format("{} keys and {} blocks", keys.size(), blocks.size()));
+		ConstIterator addBlocks(const std::vector<blockname>& names, const std::vector<Block>& blocks) {
+			if (names.size() != blocks.size()) {
+				throw tag_value_mismatch_error(std::format("{} names and {} blocks", names.size(), blocks.size()));
 			}
 
-			for (size_t i = 0; i < keys.size(); ++i) {
-				addBlock(keys[i], blocks[i]);
+			for (size_t i = 0; i < names.size(); ++i) {
+				addBlock(names[i], blocks[i]);
 			}
-			return find(row::util::toLower(keys[0]));
+			return find(row::util::toLower(names[0]));
 		}
 
-		ConstIterator removeBlock(const blockname& key) {
-			dataname lowerKey{ row::util::toLower(key) };
+		ConstIterator removeBlock(const blockname& name) {
+			dataname lowerTag{ row::util::toLower(name) };
 
-			if (!contains(lowerKey)) {
+			if (!contains(lowerTag)) {
 				return cend();
 			}
-			ConstIterator r = ++find(lowerKey);
-			m_cif.erase(lowerKey);
-			m_true_case.erase(lowerKey);
-			std::erase_if(m_block_order, [lowerKey](const auto& thing) { return thing == lowerKey; });
+			ConstIterator r = ++find(lowerTag);
+			m_cif.erase(lowerTag);
+			m_true_case.erase(lowerTag);
+			std::erase_if(m_block_order, [lowerTag](const auto& thing) { return thing == lowerTag; });
 
 			return r;
 		}
 
-		int getBlockPosition(const dataname& key) const {
+		int getBlockPosition(const dataname& name) const {
 			/*A utility function to get the numerical order in the printout
-		of `key`.  An item has coordinate `(loop_no,pos)` with
+		of `name`.  An item has coordinate `(loop_no,pos)` with
 		the top level having a `loop_no` of -1.
 		Return -1, -1, indicates doesn't exist.
 		*/
-			dataname lowerKey{ row::util::toLower(key) };
+			dataname lowerTag{ row::util::toLower(name) };
 
-			if (!contains(lowerKey)) {
+			if (!contains(lowerTag)) {
 				return -1;
 			}
-			if (row::util::contains(m_block_order, lowerKey)) {
-				return row::util::getIndexOf(m_block_order, lowerKey);
-			}
+			return row::util::getIndexOf(m_block_order, lowerTag);
 		}
 
-		ConstIterator changeBlockPosition(const dataname& key, const size_t newPosn) {
-			/*Move the printout order of `key` to `newpos`. If `key` is
+		ConstIterator changeBlockPosition(const dataname& name, const size_t newPosn) {
+			/*Move the printout order of `name` to `newpos`. If `name` is
 				in a loop, `newpos` refers to the order within the loop.*/
-			dataname lowerKey{ row::util::toLower(key) };
-			if (!contains(lowerKey)) {
-				throw no_such_tag_error(std::format("{} does not exist.", lowerKey));
+			dataname lowerTag{ row::util::toLower(name) };
+			if (!contains(lowerTag)) {
+				throw no_such_tag_error(std::format("{} does not exist.", lowerTag));
 			}
 
-			int oldPosn = getBlockPosition(key);
+			int oldPosn = getBlockPosition(name);
 			row::util::move_element(m_block_order, oldPosn, newPosn);
 
-			return find(lowerKey);
+			return find(lowerTag);
 		}
 
 		bool overwrite(bool ow) {
@@ -1286,10 +1383,10 @@ export namespace row::cif {
 		size_t size() const noexcept {
 			return m_cif.size();
 		}
-		int size(const std::string& key) const noexcept {
-			dataname lowerKey{ row::util::toLower(key) };
-			if (contains(lowerKey)) {
-				return m_cif.at(lowerKey).size();
+		int size(const std::string& name) const noexcept {
+			dataname lowerTag{ row::util::toLower(name) };
+			if (contains(lowerTag)) {
+				return static_cast<int>(m_cif.at(lowerTag).size());
 			}
 			return -1;
 		}
@@ -1304,44 +1401,44 @@ export namespace row::cif {
 			m_true_case.clear();
 			m_overwrite = true;
 		}
-		size_t erase(const blockname& key) {
-			dataname lowerKey{ row::util::toLower(key) };
-			ConstIterator r{ removeBlock(lowerKey) };
+		size_t erase(const blockname& name) {
+			dataname lowerTag{ row::util::toLower(name) };
+			ConstIterator r{ removeBlock(lowerTag) };
 			if (r != cend()) { return 1; }
 			else { return 0; }
 		}
-		ConstIterator set(const blockname& key, const Block& value) {
-			return addBlock(key, value);
+		ConstIterator set(const blockname& name, const Block& value) {
+			return addBlock(name, value);
 		}
-		ConstIterator put(const blockname& key, const Block& value) {
-			return set(key, value);
+		ConstIterator put(const blockname& name, const Block& value) {
+			return set(name, value);
 		}
 
 
 		// Lookup
-		const Block& get(const blockname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			if (contains(key)) {
-				return m_cif.at(key);
+		const Block& get(const blockname& name) const {
+			dataname lowerTag{ row::util::toLower(name) };
+			if (contains(name)) {
+				return m_cif.at(name);
 			}
-			throw no_such_tag_error(std::format("{} does not exist.", lowerKey));
+			throw no_such_tag_error(std::format("{} does not exist.", lowerTag));
 		}
-		const Block& at(const blockname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_cif.at(lowerKey);
+		const Block& at(const blockname& name) const {
+			dataname lowerTag{ row::util::toLower(name) };
+			return m_cif.at(lowerTag);
 		}
-		size_t count(const blockname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_cif.count(lowerKey);
+		size_t count(const blockname& name) const {
+			dataname lowerTag{ row::util::toLower(name) };
+			return m_cif.count(lowerTag);
 		}
-		ConstIterator find(const blockname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			std::pair<const blockname, Block>* m_ptr = const_cast<std::pair<const blockname, Block>*>(&(*m_cif.find(lowerKey)));
+		ConstIterator find(const blockname& name) const {
+			dataname lowerTag{ row::util::toLower(name) };
+			std::pair<const blockname, Block>* m_ptr = const_cast<std::pair<const blockname, Block>*>(&(*m_cif.find(lowerTag)));
 			return ConstIterator(m_ptr, this);
 		}
-		bool contains(const blockname& key) const {
-			dataname lowerKey{ row::util::toLower(key) };
-			return m_cif.contains(lowerKey);
+		bool contains(const blockname& name) const {
+			dataname lowerTag{ row::util::toLower(name) };
+			return m_cif.contains(lowerTag);
 		}
 
 

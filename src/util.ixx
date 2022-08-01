@@ -12,25 +12,23 @@ export namespace row::util {
 
 
 
-	std::string toLower(std::string str) {
-		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-		return str;
-	}
 	void toLower_i(std::string& str) {
 		std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 	}
-
-
-	std::vector<std::string> toLower(std::vector<std::string> strs) {
-		for (std::string& str : strs) {
-			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-		}
-		return strs;
+	std::string toLower(std::string str) {
+		toLower_i(str);
+		return str;
 	}
+
+
 	void toLower_i(std::vector<std::string>& strs) {
 		for (std::string& str : strs) {
-			std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+			toLower_i(str);
 		}
+	}
+	std::vector<std::string> toLower(std::vector<std::string> strs) {
+		toLower_i(strs);
+		return strs;
 	}
 
 
@@ -67,7 +65,7 @@ export namespace row::util {
 		if (it == v.cend()) {
 			return -1;
 		}
-		return it - v.cbegin();
+		return static_cast<int>(it - v.cbegin());
 	}
 
 

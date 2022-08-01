@@ -14,7 +14,7 @@ import pdqciflib;
 
 using namespace row::cif;
 
-int main(int argc, char* argv[])
+int Main(int argc, char* argv[])
 {
 
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
 
     }
-    catch (std::runtime_error& e) {
+    catch (std::runtime_error&) {
         std::cout << "caught\n";
     }
 
