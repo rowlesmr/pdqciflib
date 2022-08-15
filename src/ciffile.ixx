@@ -11,6 +11,7 @@
 #include <format>
 #include <algorithm>
 #include <utility>
+#include <string_view>
 
 import util;
 import cifexcept;
@@ -20,6 +21,7 @@ export module ciffile;
 export namespace row::cif {
 
 	using dataname = std::string;
+	using datanameview = std::string_view;
 	template< typename K, typename V>
 	using dict = std::unordered_map<K, V>;
 
@@ -27,11 +29,8 @@ export namespace row::cif {
 	class Datavalue {
 	public:
 		using size_type = typename std::vector<std::string>::size_type;
-		using iterator = typename std::vector<std::string>::iterator;
 		using const_iterator = typename std::vector<std::string>::const_iterator;
-		using reverse_iterator = typename std::vector<std::string>::reverse_iterator;
 		using const_reverse_iterator = typename std::vector<std::string>::const_reverse_iterator;
-		using reference = typename std::vector<std::string>::reference;
 		using const_reference = typename std::vector<std::string>::const_reference;
 
 		using const_iterator_double = typename std::vector<double>::const_iterator;
@@ -46,9 +45,11 @@ export namespace row::cif {
 		
 	public:
 		Datavalue() {}
-		Datavalue(std::string in) : m_strs({ std::move(in) }) {}
-		Datavalue(std::vector<std::string> in) : m_strs( std::move(in) ) {}
-		Datavalue(std::initializer_list<std::string> in) : m_strs{ std::move(in) } { std::cout << "here\n"; }
+		Datavalue(const std::string& in) : m_strs({ in }) {}
+		Datavalue(std::string&& in) : m_strs({ std::move(in) }) {}
+		Datavalue(const std::vector<std::string>& in) : m_strs( in ) {}
+		Datavalue(std::vector<std::string>&& in) : m_strs(std::move(in)) {}
+		Datavalue(std::initializer_list<std::string> in) : m_strs{ std::move(in) } {}
 
 		bool convert() const {
 			if (m_isConverted){
@@ -56,6 +57,9 @@ export namespace row::cif {
 			}
 
 			//test the first one. If it passes, assume the rest will.
+			// a fully validating parser would test everyone, as well
+			// as knowing if the tag associated with the values could
+			// be numeric, or a list, etc...
 			if (m_strs.size()) {
 				auto [val, err] = row::util::stode(m_strs[0]);
 				if (val == row::util::NaN && err == row::util::NaN) {
@@ -79,8 +83,8 @@ export namespace row::cif {
 
 			for (const auto& s : m_strs) {
 				auto [val, err] = row::util::stode(s);
-				this->m_dbls.push_back(val);
-				this->m_errs.push_back(err);
+				m_dbls.push_back(val);
+				m_errs.push_back(err);
 			}
 
 			m_isConverted = true;
@@ -111,21 +115,9 @@ export namespace row::cif {
 		}
 
 
-		//constexpr void assign(size_type count, const std::string& value) {
-		//	m_isConverted = false;
-		//	m_strs.assign(count, value);
-		//	return;
-		//}
-
 		//element access
-		constexpr reference at(size_type pos) noexcept(false) {
-			return m_strs.at(pos);
-		}
 		constexpr const_reference at(size_type pos) const noexcept(false) {
 			return m_strs.at(pos);
-		}
-		constexpr reference str_at(size_type pos) noexcept(false) {
-			return at(pos);
 		}
 		constexpr const_reference str_at(size_type pos) const noexcept(false) {
 			return at(pos);
@@ -140,30 +132,20 @@ export namespace row::cif {
 		}
 
 		// extereme iterators
-		constexpr reference front() { return m_strs.front(); }
 		constexpr const_reference front() const { return m_strs.front(); }
-		constexpr reference front_str() { return front(); }
 		constexpr const_reference front_str() const { return front(); }
 		const_reference_double front_dbl() const { convert(); return m_dbls.front(); }
 		const_reference_double front_err() const { convert();  return m_errs.front(); }
 
-		constexpr reference back() { return m_strs.back(); }
 		constexpr const_reference back() const { return m_strs.back(); }
-		constexpr reference back_str() { return back(); }
 		constexpr const_reference back_str() const { return back(); }
 		const_reference_double back_dbl() const { convert(); return m_dbls.back(); }
 		const_reference_double back_err() const { convert(); return m_errs.back(); }
 
 
 		//data pointer
-		constexpr std::string* data() noexcept {
-			return m_strs.data();
-		}
 		constexpr const std::string* data() const noexcept {
 			return m_strs.data();
-		}
-		constexpr std::string* str_data() noexcept {
-			return data();
 		}
 		constexpr const std::string* str_data() const noexcept {
 			return data();
@@ -178,26 +160,19 @@ export namespace row::cif {
 		}
 
 		//iterators
-		iterator begin() { return m_strs.begin(); };
-		iterator end() { return m_strs.end(); };
-		reverse_iterator rbegin() { return m_strs.rbegin(); };
-		reverse_iterator rend() { return m_strs.rend(); };
-
 		const_iterator begin() const { return m_strs.begin(); };
 		const_iterator end() const { return m_strs.end(); };
-
+		const_reverse_iterator rbegin() const { return m_strs.rbegin(); };
+		const_reverse_iterator rend() const { return m_strs.rend(); };
 		const_iterator cbegin() const { return m_strs.cbegin(); };
 		const_iterator cend() const { return m_strs.cend(); };
 		const_reverse_iterator crbegin() const { return m_strs.crbegin(); };
 		const_reverse_iterator crend() const { return m_strs.crend(); };
 
-		iterator str_begin() { return begin(); };
-		iterator str_end() { return end(); };
-		reverse_iterator str_rbegin() { return rbegin(); };
-		reverse_iterator str_rend() { return rend(); };
-
 		const_iterator str_begin() const { return begin(); };
 		const_iterator str_end() const { return end(); };
+		const_reverse_iterator str_rbegin() const { return rbegin(); };
+		const_reverse_iterator str_rend() const { return rend(); };
 		const_iterator str_cbegin() const { return cbegin(); };
 		const_iterator str_cend() const { return cend(); };
 		const_reverse_iterator str_crbegin() const { return crbegin(); };
@@ -205,6 +180,8 @@ export namespace row::cif {
 
 		const_iterator_double dbl_begin() const { convert(); return m_dbls.begin(); };
 		const_iterator_double dbl_end() const { convert(); return m_dbls.end(); };
+		const_reverse_iterator_double dbl_rbegin() const { convert(); return m_dbls.rbegin(); };
+		const_reverse_iterator_double dbl_rend() const { convert(); return m_dbls.rend(); };
 		const_iterator_double dbl_cbegin() const { convert(); return m_dbls.cbegin(); };
 		const_iterator_double dbl_cend() const { convert(); return m_dbls.cend(); };
 		const_reverse_iterator_double dbl_crbegin() const { convert(); return m_dbls.crbegin(); };
@@ -212,6 +189,8 @@ export namespace row::cif {
 
 		const_iterator_double err_begin() const { convert(); return m_errs.begin(); };
 		const_iterator_double err_end() const { convert(); return m_errs.end(); };
+		const_reverse_iterator_double err_rbegin() const { convert(); return m_errs.rbegin(); };
+		const_reverse_iterator_double err_rend() const { convert(); return m_errs.rend(); };
 		const_iterator_double err_cbegin() const { convert(); return m_errs.cbegin(); };
 		const_iterator_double err_cend() const { convert(); return m_errs.cend(); };
 		const_reverse_iterator_double err_crbegin() const { convert(); return m_errs.crbegin(); };
@@ -262,10 +241,6 @@ export namespace row::cif {
 			m_strs.push_back(std::forward<std::string>(value));
 			return;
 		}
-		reference emplace_back(std::string&& value) {
-			m_isConverted = false;
-			return m_strs.emplace_back(std::forward<std::string>(value));
-		}
 		constexpr void swap(Datavalue& other) {
 			m_strs.swap(other.m_strs);
 			m_dbls.swap(other.m_dbls);
@@ -283,12 +258,202 @@ export namespace row::cif {
 		friend constexpr auto operator<=>(const Datavalue& lhs, const Datavalue& rhs) {
 			return lhs.m_strs <=> rhs.m_strs;
 		}
-		friend constexpr void swap(Datavalue& lhs, Datavalue& rhs) noexcept(noexcept(lhs.swap(rhs))) {
-			lhs.swap(rhs);
-		}
+		//friend constexpr void swap(Datavalue& lhs, Datavalue& rhs) noexcept(noexcept(lhs.swap(rhs))) {
+		//	lhs.swap(rhs);
+		//}
 	};
 
 
+<<<<<<< Updated upstream
+=======
+
+	//class ItemOrder {
+	//public:
+	//	using group_iterator = std::vector<std::vector<dataname>>::iterator;
+	//	using const_group_iterator = const std::vector<std::vector<dataname>>::iterator;
+	//	using tag_iterator = std::vector<dataname>::iterator;
+	//
+	//private:
+	//	//each element in m_tags is a set of tags. If there is one tag, then it is by itself, if there ane
+	//	//  many tags, then they are a group, which implies some semantic meaning exists between them.
+	//	std::vector<std::vector<dataname>> m_tags{};
+	//	bool m_overwrite{ false };
+	//
+	//	
+	//public:
+	//	//these print_* methods are for debugging.
+	//	void print_tags() const {
+	//		for (const auto& tags : m_tags) {
+	//			for (const auto& tag : tags) {
+	//				std::cout << tag << '\t';
+	//			}
+	//			std::cout << '\n';
+	//		}
+	//	}
+	//
+	//
+	//public:
+	//
+	//	ItemOrder() = default;
+	//	explicit ItemOrder(bool overwrite) : m_overwrite{ overwrite } {}
+	//
+	//	void /*const_iterator*/ addTag(dataname tag) {
+	//		bool exists = contains(tag);
+	//		if (!canOverwrite() && exists) {
+	//			throw tag_already_exists_error(tag);
+	//		}
+	//		if (!exists) {
+	//			m_tags.push_back({ std::move(tag) });
+	//		}
+	//
+	//		return /*const_iterator*/;
+	//	}
+	//
+	//	void addTags(const std::vector<dataname>& tags) {
+	//		//todo: add checks so this is atomic: it either works for all or none.
+	//
+	//		std::for_each(tags.cbegin(), tags.cend(), [this](auto& tag) { this->addTag(tag); });
+	//	}
+	//
+	//	void addTagsAsGroup(std::vector<dataname> tags) {
+	//		//check each one for existance, taking into account the ability to overwrite tags
+	//		std::vector<bool> exists{};
+	//		bool doRemove{ false };
+	//		std::for_each(tags.cbegin(), tags.cend(), [this, &exists, &doRemove](const dataname& tag) {
+	//			exists.push_back(this->contains(tag)); 
+	//			doRemove = doRemove || exists.back();
+	//			if (!this->canOverwrite() && exists.back()) {
+	//				throw tag_already_exists_error(tag);
+	//			}
+	//		});
+	//
+	//		//if I am overwriting tags, then remove them
+	//		if (doRemove) {
+	//			for (size_t i{ 0 }; i < exists.size(); ++i) {
+	//				if (exists[i]) {
+	//					removeTag(tags[i]);
+	//				}
+	//			}
+	//		}
+	//
+	//		//now I can add my tags
+	//		m_tags.push_back({ std::move(tags) });
+	//	}
+	//
+	//	void addTagToGroup(dataname newTag, const dataname& existingTag) {
+	//		//get an iterator to the vector containing the vector containing the existing tag.
+	//		auto it{ findGroupContaining(existingTag) };
+	//
+	//		if (it == m_tags.end()) {
+	//			throw no_such_tag_error(existingTag);
+	//		}
+	//		else {
+	//			it->push_back(std::move(newTag));
+	//		}
+	//	}
+	//
+	//	void removeTag(const dataname& tag) {
+	//		//remove the tag - getting the return value of the find_if only because it is [[nodiscard]]
+	//		//  I want this function because of the side-effects
+	//		auto it{ std::find_if(m_tags.begin(), m_tags.end(), [&tag](std::vector<dataname>& tags) {
+	//			auto it = std::find(tags.begin(), tags.end(), tag);
+	//			if (it != tags.end()) {
+	//				tags.erase(it);
+	//				return true;
+	//			}
+	//			return false;
+	//		}) };
+	//
+	//		//remove zero-length entries
+	//		std::erase_if(m_tags, [](std::vector<dataname>& tags) { return tags.size() == 0; });
+	//	}
+	//
+	//	bool isInGroup(const dataname& tag) const {
+	//		return findGroupContaining(tag)->size() > 1;
+	//	}
+	//
+	//	bool areInSameGroup(const dataname& tag, const dataname& otherTag) const {
+	//		return row::util::contains(findGroupContaining(tag), otherTag);
+	//	}
+	//
+	//	int getLoopNum(const dataname& tag) const {
+	//		return -1;
+	//	}
+	//
+	//	vo/d /*const std::vector<dataname>&*/ getGroupTags(const dataname& tag) const {
+	//
+	//	}
+	//
+	//	std::tuple<int, int> getTagPosition(const dataname& tag) const {
+	//
+	//		int x{ -1 };
+	//		int y{ -1 };
+	//
+	//		if (!contains(tag)) {
+	//			return std::tuple<int, int> {x, y};
+	//		}
+	//		auto grp_it = findGroupContaining(tag);
+	//		auto tag_it = find(grp_it->cbegin(), grp_it->cend(), tag);
+	//
+	//		x = grp_it - m_tags.begin();
+	//		y = (grp_it->size() > 1) ? tag_it - grp_it->begin() : -1;
+	//
+	//		return std::tuple<int, int> {x, y};
+	//	}
+	//
+	//	void changeTagPosition(const dataname& tag, size_t newPosn) {
+	//		/*Move the printout order of `tag` to `newpos`. If `tag` is
+	//			in a loop, `newpos` refers to the order within the loop.*/
+	//
+	//		auto [x, y] = getTagPosition(tag);
+	//
+	//		if (y == -1) {
+	//			row::util::makeInRange<size_t>(newPosn, 0, m_tags.size() - 1);
+	//			auto it = m_tags.begin();
+	//			std::rotate(it + newPosn, it + x, it + x + 1);
+	//		}
+	//		else {
+	//			row::util::makeInRange<size_t>(newPosn, 0, m_tags[y].size() - 1);
+	//			auto it = m_tags[y].begin();
+	//			std::rotate(it + newPosn, it + x, it + x + 1);
+	//		}
+	//	}
+	//
+	//	void changeGroupPosition(const dataname& tag, size_t newPosn) {
+	//		/*Move the printout order of the group containing `tag` to `newpos`.*/
+	//
+	//		auto [x, _] = getTagPosition(tag);
+	//
+	//		row::util::makeInRange<size_t>(newPosn, 0, m_tags.size() - 1);
+	//		auto it = m_tags.begin();
+	//		std::rotate(it + newPosn, it + x, it + x + 1);
+	//}
+	//
+	//	bool canOverwrite() {
+	//		return m_overwrite;
+	//	}
+	//	void overwrite(bool ow) {
+	//		m_overwrite = ow;
+	//	}
+	//
+	//
+	//	bool contains(const dataname& findMe) const {
+	//		return findGroupContaining(findMe) != m_tags.end();
+	//	}
+	//
+	//	group_iterator findGroupContaining(const dataname& tag) {
+	//		return std::find_if(m_tags.begin(), m_tags.end(), [&tag](auto& tags) {
+	//			return std::find(tags.begin(), tags.end(), tag) != tags.end();
+	//			});
+	//	}
+	//
+	//	const_group_iterator findGroupContaining(const dataname& tag) const {
+	//		return findGroupContaining(tag);
+	//	}
+	//};
+
+
+>>>>>>> Stashed changes
 	class Block {
 	public:
 		using itemorder = std::variant<int, dataname>;
@@ -349,18 +514,23 @@ export namespace row::cif {
 			std::cout << "---\n";
 		}
 
-		struct ConstIterator;
+		struct const_iterator;
 
 	public:
 		Block() = default;
-		Block(bool ow) : overwrite(ow) {}
+		explicit Block(bool ow) : overwrite(ow) {}
 
-		ConstIterator addItem(dataname tag, Datavalue value) noexcept(false) {
+
+		const_iterator addItem(dataname tag, Datavalue value) noexcept(false) {
+			if (tag.size() < 2 || tag[0] != '_') {
+				throw illegal_tag_error(tag);
+			}
+
 			dataname lowerTag{ row::util::toLower(tag) };
-
 			if (!overwrite && contains(lowerTag)) {
 				throw tag_already_exists_error(lowerTag);
 			}
+
 
 			if (!contains(lowerTag) && !isInLoop(lowerTag)) {
 				m_item_order.push_back(lowerTag);
@@ -369,51 +539,43 @@ export namespace row::cif {
 			if (m_true_case.contains(lowerTag)) {
 				m_true_case.erase(lowerTag);
 			}
-			m_true_case.insert({ lowerTag, tag });
-			m_block.insert({ lowerTag, std::move(value) });
-
-			return find(lowerTag);
+			m_true_case.insert({ lowerTag, std::move(tag) });
+			const auto&[it, _] = m_block.insert({ lowerTag, std::move(value) });
+			// need to convert the iterator to one of mine
+			return const_iterator(&(*it), this);
 		}
 
-		ConstIterator addItems(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
+		const_iterator addItems(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
 			if (tags.size() != values.size()) {
 				throw tag_value_mismatch_error(std::format("{} tags and {} values", tags.size(), values.size()));
 			}
 
-			for (size_t i = 0; i < tags.size(); ++i) {
+			const_iterator it = addItem(tags[0], values[0]);
+			for (size_t i = 1; i < tags.size(); ++i) {
 				addItem(tags[i], values[i]);
 			}
-			return find(row::util::toLower(tags[0]));
+			return it;
 		}
 
-		ConstIterator addItemsAsLoop(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
-			if (tags.size() != values.size()) {
-				throw tag_value_mismatch_error(std::format("{} tags and {} lots of values", tags.size(), values.size()));
-			}
-
+		const_iterator addItemsAsLoop(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
 			size_t len{ values[0].size()};
 			if (!(std::all_of(values.cbegin(), values.cend(), [len](const auto& value) { return value.size() == len; }))) {
 				throw loop_length_mismatch_error("Different number of values per tag in loop");
 			}
 
-			for (size_t i = 0; i < tags.size(); ++i) {
-				addItem(tags[i], values[i]);
-			}
+			addItems(tags, values);
 			return createLoop(tags);
 		}
 
-		ConstIterator createLoop(const std::vector<dataname>& tags) noexcept(false) {
+		const_iterator createLoop(const std::vector<dataname>& tags) noexcept(false) {
 			std::vector<dataname> lowerTags{ row::util::toLower(tags) };
 
 			//check that all tags exist, and have all the same length values
+			size_t len{ m_block[lowerTags[0]].size() };
 			for (const auto& tag : lowerTags) {
 				if (!m_block.contains(tag)) {
 					throw no_such_tag_error(std::format("{} does not exist.", tag));
 				}
-			}
-
-			size_t len{ m_block[lowerTags[0]].size() };
-			for (const auto& tag : lowerTags) {
 				if (m_block.at(tag).size() != len) {
 					throw loop_length_mismatch_error("Different number of values per tag in loop");
 				}
@@ -465,7 +627,7 @@ export namespace row::cif {
 			return find(lowerTags[0]);
 		}
 
-		ConstIterator addNameToLoop(const dataname& newName, const dataname& oldName) noexcept(false) {
+		const_iterator addNameToLoop(const dataname& newName, const dataname& oldName) noexcept(false) {
 			dataname lowerNew{ row::util::toLower(newName) };
 			dataname lowerOld{ row::util::toLower(oldName) };
 
@@ -513,15 +675,23 @@ export namespace row::cif {
 			return getLoopNum(tag) != -1;
 		}
 
-		ConstIterator removeItem(const dataname& tag) {
+		const_iterator removeItem(const dataname& tag) {
 			dataname lowerTag{ row::util::toLower(tag) };
 
 			if (!contains(lowerTag)) {
 				return cend();
 			}
 
+<<<<<<< Updated upstream
 			ConstIterator r = ++find(lowerTag);
 
+=======
+			const_iterator returnMe{ find(lowerTag) };
+			if (returnMe != cbegin()) {
+				--returnMe;
+			}
+			
+>>>>>>> Stashed changes
 			int loopNum{ getLoopNum(tag) };
 			m_block.erase(lowerTag);
 			m_true_case.erase(lowerTag);
@@ -562,7 +732,6 @@ export namespace row::cif {
 			int i{ row::util::getIndexOf(get(tag).getStrings(), value)};
 
 			return Datavalue{ get(associatedTag).getStrings()[i] };
-
 		}
 
 
@@ -589,7 +758,7 @@ export namespace row::cif {
 			}
 		}
 
-		ConstIterator changeItemPosition(const dataname& tag, const size_t newPosn) {
+		const_iterator changeItemPosition(const dataname& tag, const size_t newPosn) {
 			/*Move the printout order of `tag` to `newpos`. If `tag` is
 				in a loop, `newpos` refers to the order within the loop.*/
 			dataname lowerTag{ row::util::toLower(tag) };
@@ -606,7 +775,7 @@ export namespace row::cif {
 			return find(lowerTag);
 		}
 
-		ConstIterator changeLoopPosition(const dataname& tag, const size_t newPosn) {
+		const_iterator changeLoopPosition(const dataname& tag, const size_t newPosn) {
 			/*Move the printout order of the loop containing `tag` to `newpos`.*/
 			dataname lowerTag{ row::util::toLower(tag) };
 			int loopNum = getLoopNum(tag);
@@ -639,10 +808,10 @@ export namespace row::cif {
 			return r;
 		}
 
-		ConstIterator set(const dataname& tag, const Datavalue& value) {
+		const_iterator set(const dataname& tag, const Datavalue& value) {
 			return addItem(tag, value);
 		}
-		ConstIterator put(const dataname& tag, const Datavalue& value) {
+		const_iterator put(const dataname& tag, const Datavalue& value) {
 			return set(tag, value);
 		}
 		const Datavalue& get(const dataname& tag) const {
@@ -750,9 +919,8 @@ export namespace row::cif {
 		}
 
 
-
-		//// taken from https://www.internalpointers.com/post/writing-custom-iterators-modern-cpp
 		//struct Iterator
+		//// taken from https://www.internalpointers.com/post/writing-custom-iterators-modern-cpp
 		//{
 		//	using iterator_category = std::forward_iterator_tag;
 		//	using difference_type = std::ptrdiff_t;
@@ -824,7 +992,7 @@ export namespace row::cif {
 
 
 		//// taken from https://www.internalpointers.com/post/writing-custom-iterators-modern-cpp
-		struct ConstIterator
+		struct const_iterator
 		{
 		public:		
 			using iterator_category = std::bidirectional_iterator_tag;
@@ -840,14 +1008,14 @@ export namespace row::cif {
 			const Block* block;
 		
 		public:
-			ConstIterator(const_pointer m_ptr, const Block* blk)
+			const_iterator(const_pointer m_ptr, const Block* blk)
 				: m_ptr{ m_ptr }, block{ blk } { }
 
 			const_reference operator*() const { return *m_ptr; }
 			const_pointer operator->() { return m_ptr; }
 
 			// Prefix increment
-			ConstIterator& operator++() {
+			const_iterator& operator++() {
 				dataname currentTag{  };
 
 				//what is ++end()? It should be begin();
@@ -896,7 +1064,7 @@ export namespace row::cif {
 			}
 
 			// Prefix decrement
-			ConstIterator& operator--() {
+			const_iterator& operator--() {
 
 				dataname currentTag{};
 				// what is --end()? It should be begin();
@@ -941,11 +1109,11 @@ export namespace row::cif {
 			}
 
 			// Postfix increment/decrement
-			ConstIterator operator++(int) { ConstIterator tmp = *this; ++(*this); return tmp; }
-			ConstIterator operator--(int) { ConstIterator tmp = *this; --(*this); return tmp; }
+			const_iterator operator++(int) { const_iterator tmp = *this; ++(*this); return tmp; }
+			const_iterator operator--(int) { const_iterator tmp = *this; --(*this); return tmp; }
 
-			friend bool operator== (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr == b.m_ptr; };
-			friend bool operator!= (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr != b.m_ptr; };
+			friend bool operator== (const const_iterator& a, const const_iterator& b) { return a.m_ptr == b.m_ptr; };
+			friend bool operator!= (const const_iterator& a, const const_iterator& b) { return a.m_ptr != b.m_ptr; };
 
 		private:
 			const_pointer getPtr(size_t idx, dataname& currentTag) {
@@ -967,36 +1135,21 @@ export namespace row::cif {
 			const_pointer nextPtr(size_t currIndex, dataname& currentTag) {
 				return getPtr(++currIndex, currentTag);
 			}
-
-
-
-
-
 		};
 
-
-
 		//Iterators
-
-		//Iterator begin() noexcept {
-		//	return Iterator(ptrToFirstItem(), this);
-		//}
-		//Iterator end() noexcept {
-		//	return Iterator(nullptr, this);
-		//}
-
-		ConstIterator begin() const noexcept {
-			return ConstIterator(constptrToFirstItem(), this);
+		const_iterator begin() const noexcept {
+			return const_iterator(constptrToFirstItem(), this);
 		}
-		ConstIterator end() const noexcept {
-			return ConstIterator(nullptr, this);
+		const_iterator end() const noexcept {
+			return const_iterator(nullptr, this);
 		}
 
-		ConstIterator cbegin() const noexcept {
-			return ConstIterator(constptrToFirstItem(), this);
+		const_iterator cbegin() const noexcept {
+			return const_iterator(constptrToFirstItem(), this);
 		}
-		ConstIterator cend() const noexcept {
-			return ConstIterator(nullptr, this);
+		const_iterator cend() const noexcept {
+			return const_iterator(nullptr, this);
 		}
 
 		//capacity
@@ -1028,7 +1181,7 @@ export namespace row::cif {
 			overwrite = true;
 		}
 		size_t erase(const dataname& tag) {
-			ConstIterator r = removeItem(tag);
+			const_iterator r = removeItem(tag);
 			if (r == this->cend())
 				return 0;
 			else
@@ -1044,7 +1197,7 @@ export namespace row::cif {
 			dataname lowerTag{ row::util::toLower(tag) };
 			return m_block.count(lowerTag);
 		}
-		ConstIterator find(const dataname& tag) const {
+		const_iterator find(const dataname& tag) const {
 			dataname lowerTag{ row::util::toLower(tag) };
 
 			auto it = m_block.find(lowerTag);
@@ -1052,8 +1205,7 @@ export namespace row::cif {
 				return cend();
 			}
 
-			std::pair<const dataname, Datavalue>* m_ptr = const_cast<std::pair<const dataname, Datavalue>*>(&(*it));
-			return ConstIterator(m_ptr, this);
+			return const_iterator(&(*it), this);
 		}
 		bool contains(const dataname& tag) const {
 			dataname lowerTag{ row::util::toLower(tag) };

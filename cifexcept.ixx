@@ -89,5 +89,21 @@ export namespace row::cif {
         }
     };
 
+    class illegal_tag_error : public std::runtime_error {
+    private:
+        std::shared_ptr<internal::concreteException> m_impl;
+
+    public:
+        illegal_tag_error(const char* msg)
+            : std::runtime_error(msg),
+            m_impl(std::make_shared<internal::concreteException>(msg)) {}
+        illegal_tag_error(const std::string& msg)
+            : illegal_tag_error(msg.c_str()) {}
+
+        [[nodiscard]] const char* what() const noexcept override {
+            return m_impl->what();
+        }
+    };
+
 }
 
