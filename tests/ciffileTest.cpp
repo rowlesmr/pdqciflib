@@ -14,7 +14,7 @@
 
 #include "pch.h"
 
-import pdqciflib;
+#include "pdqciflib.hpp"
 
 using namespace row::cif;
 using namespace row::util;
