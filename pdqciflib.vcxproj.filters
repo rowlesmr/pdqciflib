@@ -15,19 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\ciffile.ixx">
+    <ClInclude Include="include\row\pdqciflib.hpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cifparse.ixx">
+    </ClInclude>
+    <ClInclude Include="include\row\pdqciflib\cifexcept.hpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\util.ixx">
+    </ClInclude>
+    <ClInclude Include="include\row\pdqciflib\ciffile.hpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cifexcept.ixx">
+    </ClInclude>
+    <ClInclude Include="include\row\pdqciflib\cifparse.hpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pdqciflib.ixx">
+    </ClInclude>
+    <ClInclude Include="include\row\pdqciflib\util.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="include\row\pdqciflib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

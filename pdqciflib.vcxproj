@@ -19,11 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\cifexcept.ixx" />
-    <ClCompile Include="src\ciffile.ixx" />
-    <ClCompile Include="src\cifparse.ixx" />
-    <ClCompile Include="src\pdqciflib.ixx" />
-    <ClCompile Include="src\util.ixx" />
+    <ClInclude Include="include\row\pdqciflib.hpp" />
+    <ClInclude Include="include\row\pdqciflib\cifexcept.hpp" />
+    <ClInclude Include="include\row\pdqciflib\ciffile.hpp" />
+    <ClInclude Include="include\row\pdqciflib\cifparse.hpp" />
+    <ClInclude Include="include\row\pdqciflib\util.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="include\row\pdqciflib.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -80,10 +83,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)src\vendor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)src\vendor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)vendor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
