@@ -1,21 +1,20 @@
 
+#ifndef ROW_CIFPARSE_HPP
+#define ROW_CIFPARSE_HPP
+
+
 #include <iostream>
 #include <stdexcept>
 #include "tao/pegtl.hpp"
 
-import ciffile;
-import cifexcept;
-
-export module cifparse;
+#include "ciffile.hpp"
+#include "cifexcept.hpp"
 
 namespace row::cif {
 
     namespace pegtl = tao::pegtl;
 
     namespace rules {
-
-        //#define DEBUG_RULES
-
         //reserved words
         struct DATA : TAO_PEGTL_ISTRING("data_") {};
         struct LOOP : TAO_PEGTL_ISTRING("loop_") {};
@@ -93,7 +92,7 @@ namespace row::cif {
         //item
         struct dataitem : pegtl::sor<pair, loop> {};
 
-        struct blockframecode : pegtl::plus<nonblankchar> {};
+        struct blockframecode : pegtl::star<nonblankchar> {};
 
         //saveframe
         struct saveframeend : SAVE {};
@@ -117,25 +116,11 @@ namespace row::cif {
         bool is_quote{ false };
         bool is_printed{ false };
 
-        void reset() {
-            is_loop = false;
-            is_quote = false;
-            is_printed = false;
-        }
-        void get_ready_to_print() {
-            is_quote = true;
-            is_printed = false;
-        }
-        void just_printed() {
-            is_printed = true;
-        }
-        void finished_printing() {
-            is_quote = false;
-            is_printed = false;
-        }
-        void loop() {
-            is_loop = !is_loop;
-        }
+        void reset();
+        void get_ready_to_print();
+        void just_printed();
+        void finished_printing();
+        void loop();
     };
 
 
@@ -150,32 +135,12 @@ namespace row::cif {
         size_t totalValues{};
         size_t tagNum{};
 
-        void initialiseValues() {
-            if (values.size() == 0) {
-                maxLoop = tags.size();
-                values = std::vector<Datavalue>(maxLoop);
-            }
-        }
+        void initialiseValues();
 
-        void appendTag(std::string tag) {
-            tags.push_back(std::move(tag));
-            ++tagNum;
-        }
-        void appendValue(std::string val) {
-            values[loopNum].push_back(std::move(val));
-            loopNum = ++loopNum % maxLoop;
-            ++totalValues;
-        }
+        void appendTag(std::string in_tag);
+        void appendValue(std::string val);
 
-        void clear() {
-            tag.clear();
-            tags.clear();
-            values.clear();
-            loopNum = 0;
-            maxLoop = 0;
-            totalValues = 0;
-            tagNum = 0;
-        }
+        void clear();
     };
 
 
@@ -203,7 +168,7 @@ namespace row::cif {
                 out.addName(in.string());
             }
             catch (tag_already_exists_error&) {
-                throw pegtl::parse_error("Duplicate blockcode found: " + in.string(), in);
+                throw pegtl::parse_error("Duplicate blockname found: " + in.string(), in);
             }
             status.reset();
         }
@@ -270,7 +235,7 @@ namespace row::cif {
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
             Block& block = out.getLastBlock();           
             try {
-                block.addItemsAsLoop(std::move(buffer.tags), std::move(buffer.values));
+                block.addItemsAsLoop(buffer.tags, buffer.values);
             }
             catch (const tag_already_exists_error&) {
                 throw pegtl::parse_error("Tag in loop already exists", in);
@@ -304,7 +269,8 @@ namespace row::cif {
     };
         
 
-    template<typename Input> void parse_input(Cif& d, Input&& in) noexcept(false) {
+    template<typename Input> 
+    void parse_input(Cif& d, Input&& in, bool printErr = true) noexcept(false) {
         try {
             Status status{};
             Buffer buffer{};
@@ -313,38 +279,28 @@ namespace row::cif {
         catch (pegtl::parse_error& e) {
             const auto p = e.positions().front();
             //pretty-print the error msg and the line that caused it, with an indicator at the token that done it.
-            std::cout << e.what() << '\n'
-                << in.line_at(p) << '\n'
-                << std::setw(p.column) << '^' << std::endl;
+            if (printErr) {
+                std::cerr << e.what() << '\n'
+                    << in.line_at(p) << '\n'
+                    << std::setw(p.column) << '^' << std::endl;
+            }
             throw std::runtime_error("Parsing error.");
         }
     }
 
-    template<typename Input> Cif read_input(Input&& in, bool overwrite = false)  noexcept(false) {
+    template<typename Input> 
+    Cif read_input(Input&& in, bool overwrite = false, bool printErr = true)  noexcept(false) {
         Cif cif{ in.source() };
         cif.overwrite(overwrite);
-        parse_input(cif, in);
+        parse_input(cif, in, printErr);
         return cif;
     }
 
     //read in a file into a Cif. Will throw std::runtime_error if it encounters problems
-    export Cif read_file(const std::string& filename, bool overwrite = false) noexcept(false) {
-        pegtl::file_input in(filename);
-        return read_input(in, overwrite);
-    }
+    Cif read_file(const std::string& filename, bool overwrite = false, bool printErr = true) noexcept(false);
 
     //read a string into a Cif. Will throw std::runtime_error if it encounters problems
-    export Cif read_string(const std::string& cifstring, bool overwrite = false, const std::string& source = "string") noexcept(false) {
-        pegtl::string_input in(cifstring, source);
-        return read_input(in, overwrite);
-    }
-
-
-
-
-
-
-
-
+    Cif read_string(const std::string& cifstring, bool overwrite = false, bool printErr = true, const std::string& source = "string") noexcept(false);
 
 }
+#endif // !ROW_CIFPARSE_HPP
