@@ -21,16 +21,13 @@
     <ClCompile Include="src\cifparse.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pdqciflib.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\util.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pdqciflib.ixx">
+    <ClCompile Include="src\cifexcept.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cifexcept.ixx">
+    <ClCompile Include="src\pdqciflib.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

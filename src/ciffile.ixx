@@ -264,8 +264,6 @@ export namespace row::cif {
 	};
 
 
-<<<<<<< Updated upstream
-=======
 
 	//class ItemOrder {
 	//public:
@@ -453,7 +451,7 @@ export namespace row::cif {
 	//};
 
 
->>>>>>> Stashed changes
+
 	class Block {
 	public:
 		using itemorder = std::variant<int, dataname>;
@@ -682,16 +680,11 @@ export namespace row::cif {
 				return cend();
 			}
 
-<<<<<<< Updated upstream
-			ConstIterator r = ++find(lowerTag);
-
-=======
 			const_iterator returnMe{ find(lowerTag) };
 			if (returnMe != cbegin()) {
 				--returnMe;
 			}
 			
->>>>>>> Stashed changes
 			int loopNum{ getLoopNum(tag) };
 			m_block.erase(lowerTag);
 			m_true_case.erase(lowerTag);
@@ -707,7 +700,7 @@ export namespace row::cif {
 			else {
 				std::erase_if(m_item_order, [lowerTag](const auto& thing) { if (thing.index() == 1) { return std::get<std::string>(thing) == lowerTag; } else { return false; }});
 			}
-			return r;
+			return returnMe;
 		}
 
 		Datavalue getAssociatedValue(const dataname& tag, const std::string& value, const dataname& associatedTag) {
@@ -733,7 +726,6 @@ export namespace row::cif {
 
 			return Datavalue{ get(associatedTag).getStrings()[i] };
 		}
-
 
 		std::tuple<int, int> getItemPosition(const dataname& tag) const {
 			/*A utility function to get the numerical order in the printout
@@ -822,7 +814,6 @@ export namespace row::cif {
 			throw no_such_tag_error(std::format("{} does not exist.", lowerTag));
 		}
 
-
 		std::vector<dataname> getNames() const {
 			std::vector<dataname> names{};			
 			for (const auto& [k, _] : *this) {
@@ -845,20 +836,16 @@ export namespace row::cif {
 			return getValues();
 		}
 
-
-
-
-
 		std::string makeStringLength(dataname tag, size_t len) const {
 			return std::format("{1:{0}}", len, std::move(tag));
 		}
 
 		std::string formatValue(std::string value) const {
 			if (value.find('\n') != std::string::npos) {
-				value = "\n;\n" + value + "\n;";
+				value = "\n;\n" + value + "\n;"; //its a semicolon textfield
 			}
 			else if (value.find(' ') != std::string::npos || value[0] == '_') {
-				value = "\"" + value + "\"";
+				value = "\"" + value + "\""; //it's a string that needs delimiting
 			}
 			return value;
 		}
@@ -1193,10 +1180,12 @@ export namespace row::cif {
 			dataname lowerTag{ row::util::toLower(tag) };
 			return m_block.at(lowerTag);
 		}
+		
 		size_t count(const dataname& tag) const {
 			dataname lowerTag{ row::util::toLower(tag) };
 			return m_block.count(lowerTag);
 		}
+		
 		const_iterator find(const dataname& tag) const {
 			dataname lowerTag{ row::util::toLower(tag) };
 
@@ -1207,6 +1196,7 @@ export namespace row::cif {
 
 			return const_iterator(&(*it), this);
 		}
+		
 		bool contains(const dataname& tag) const {
 			dataname lowerTag{ row::util::toLower(tag) };
 			return m_block.contains(lowerTag);
@@ -1282,7 +1272,7 @@ export namespace row::cif {
 			std::cout << "\n---\n";
 		}
 
-		struct ConstIterator;
+		struct const_iterator;
 	public:
 		Cif() {}
 		explicit Cif(std::string source) : m_source(std::move(source)) {}
@@ -1290,6 +1280,7 @@ export namespace row::cif {
 		Block& getLastBlock() {
 			return m_cif.at(m_block_order.back());
 		}
+
 		const Block& getLastBlock() const {
 			return m_cif.at(m_block_order.back());
 		}
@@ -1317,7 +1308,11 @@ export namespace row::cif {
 			return m_cif[lowerTag];
 		}
 
-		ConstIterator addBlock(const blockname& name, const Block& block) noexcept(false) {
+		Block& addBlock(const blockname& name) noexcept(false) {
+			return addName(name);
+		}
+
+		const_iterator addBlock(const blockname& name, const Block& block) noexcept(false) {
 			dataname lowerTag{ row::util::toLower(name) };
 
 			if (!canOverwrite() && contains(lowerTag)) {
@@ -1334,7 +1329,7 @@ export namespace row::cif {
 			return find(lowerTag);
 		}
 
-		ConstIterator addBlocks(const std::vector<blockname>& names, const std::vector<Block>& blocks) {
+		const_iterator addBlocks(const std::vector<blockname>& names, const std::vector<Block>& blocks) {
 			if (names.size() != blocks.size()) {
 				throw tag_value_mismatch_error(std::format("{} names and {} blocks", names.size(), blocks.size()));
 			}
@@ -1345,13 +1340,13 @@ export namespace row::cif {
 			return find(row::util::toLower(names[0]));
 		}
 
-		ConstIterator removeBlock(const blockname& name) {
+		const_iterator removeBlock(const blockname& name) {
 			dataname lowerTag{ row::util::toLower(name) };
 
 			if (!contains(lowerTag)) {
 				return cend();
 			}
-			ConstIterator r = ++find(lowerTag);
+			const_iterator r = ++find(lowerTag);
 			m_cif.erase(lowerTag);
 			m_true_case.erase(lowerTag);
 			std::erase_if(m_block_order, [lowerTag](const auto& thing) { return thing == lowerTag; });
@@ -1373,7 +1368,7 @@ export namespace row::cif {
 			return row::util::getIndexOf(m_block_order, lowerTag);
 		}
 
-		ConstIterator changeBlockPosition(const dataname& name, const size_t newPosn) {
+		const_iterator changeBlockPosition(const dataname& name, const size_t newPosn) {
 			/*Move the printout order of `name` to `newpos`. If `name` is
 				in a loop, `newpos` refers to the order within the loop.*/
 			dataname lowerTag{ row::util::toLower(name) };
@@ -1416,8 +1411,6 @@ export namespace row::cif {
 			return cif;
 		}
 
-
-
 		//struct Iterator
 		//// taken from https://www.internalpointers.com/post/writing-custom-iterators-modern-cpp
 		//{
@@ -1459,7 +1452,7 @@ export namespace row::cif {
 		//};
 
 
-		struct ConstIterator
+		struct const_iterator
 		{
 			using iterator_category = std::forward_iterator_tag;
 			using difference_type = std::ptrdiff_t;
@@ -1469,14 +1462,14 @@ export namespace row::cif {
 			using const_pointer = const std::pair<const blockname, Block>*;
 			using const_reference = const std::pair<const blockname, Block>&;
 
-			ConstIterator(const_pointer m_ptr, const Cif* cif)
+			const_iterator(const_pointer m_ptr, const Cif* cif)
 				: m_ptr{ m_ptr }, cif{ cif } { }
 
 			const_reference operator*() const { return *m_ptr; }
 			const_pointer operator->() { return m_ptr; }
 
 			// Prefix increment
-			ConstIterator& operator++() {
+			const_iterator& operator++() {
 				blockname currentBlock{ m_ptr->first };
 				int posn = cif->getBlockPosition(currentBlock);
 				if (posn < cif->m_block_order.size() - 1) { // not at the end of the block_order
@@ -1490,10 +1483,10 @@ export namespace row::cif {
 			}
 
 			// Postfix increment
-			ConstIterator operator++(int) { ConstIterator tmp = *this; ++(*this); return tmp; }
+			const_iterator operator++(int) { const_iterator tmp = *this; ++(*this); return tmp; }
 
-			friend bool operator== (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr == b.m_ptr; };
-			friend bool operator!= (const ConstIterator& a, const ConstIterator& b) { return a.m_ptr != b.m_ptr; };
+			friend bool operator== (const const_iterator& a, const const_iterator& b) { return a.m_ptr == b.m_ptr; };
+			friend bool operator!= (const const_iterator& a, const const_iterator& b) { return a.m_ptr != b.m_ptr; };
 
 
 		private:
@@ -1502,27 +1495,18 @@ export namespace row::cif {
 		};
 
 
-
-		//Iterators
-		//Iterator begin() noexcept {
-		//	return Iterator(ptrToFirstItem(), this);
-		//}
-		//Iterator end() noexcept {
-		//	return Iterator(nullptr, this);
-		//}
-
-		ConstIterator begin() const noexcept {
-			return ConstIterator(constptrToFirstBlock(), this);
+		const_iterator begin() const noexcept {
+			return const_iterator(constptrToFirstBlock(), this);
 		}
-		ConstIterator end() const noexcept {
-			return ConstIterator(nullptr, this);
+		const_iterator end() const noexcept {
+			return const_iterator(nullptr, this);
 		}
 
-		ConstIterator cbegin() const noexcept {
-			return ConstIterator(constptrToFirstBlock(), this);
+		const_iterator cbegin() const noexcept {
+			return const_iterator(constptrToFirstBlock(), this);
 		}
-		ConstIterator cend() const noexcept {
-			return ConstIterator(nullptr, this);
+		const_iterator cend() const noexcept {
+			return const_iterator(nullptr, this);
 		}
 
 		//capacity
@@ -1555,14 +1539,14 @@ export namespace row::cif {
 		}
 		size_t erase(const blockname& name) {
 			dataname lowerTag{ row::util::toLower(name) };
-			ConstIterator r{ removeBlock(lowerTag) };
+			const_iterator r{ removeBlock(lowerTag) };
 			if (r != cend()) { return 1; }
 			else { return 0; }
 		}
-		ConstIterator set(const blockname& name, const Block& value) {
+		const_iterator set(const blockname& name, const Block& value) {
 			return addBlock(name, value);
 		}
-		ConstIterator put(const blockname& name, const Block& value) {
+		const_iterator put(const blockname& name, const Block& value) {
 			return set(name, value);
 		}
 
@@ -1583,10 +1567,10 @@ export namespace row::cif {
 			dataname lowerTag{ row::util::toLower(name) };
 			return m_cif.count(lowerTag);
 		}
-		ConstIterator find(const blockname& name) const {
+		const_iterator find(const blockname& name) const {
 			dataname lowerTag{ row::util::toLower(name) };
 			std::pair<const blockname, Block>* m_ptr = const_cast<std::pair<const blockname, Block>*>(&(*m_cif.find(lowerTag)));
-			return ConstIterator(m_ptr, this);
+			return const_iterator(m_ptr, this);
 		}
 		bool contains(const blockname& name) const {
 			dataname lowerTag{ row::util::toLower(name) };

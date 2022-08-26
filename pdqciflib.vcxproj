@@ -19,11 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cifexcept.ixx" />
-    <ClCompile Include="pdqciflib.ixx" />
+    <ClCompile Include="src\cifexcept.ixx" />
     <ClCompile Include="src\ciffile.ixx" />
     <ClCompile Include="src\cifparse.ixx" />
-    <ClCompile Include="src\pdqciflib.cpp" />
+    <ClCompile Include="src\pdqciflib.ixx" />
     <ClCompile Include="src\util.ixx" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -58,7 +57,7 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
@@ -137,7 +136,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

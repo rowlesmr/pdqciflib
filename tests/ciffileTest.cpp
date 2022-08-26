@@ -104,22 +104,18 @@ namespace ciffileTest {
 
 
 		std::string s11{ d1.at(0) };
-		std::string& s12{ d1.at(0) };
 		const std::string s13{ d1.at(0) };
 		const std::string& s14{ d1.at(0) };
 		EXPECT_EQ(s11, str1_can[0]);
-		EXPECT_EQ(s12, str1_can[0]);
 		EXPECT_EQ(s13, str1_can[0]);
 		EXPECT_EQ(s14, str1_can[0]);
 		EXPECT_THROW(d1.at(10), std::out_of_range);
 
 
 		std::string s21{ d1.str_at(0) };
-		std::string& s22{ d1.str_at(0) };
 		const std::string s23{ d1.str_at(0) };
 		const std::string& s24{ d1.str_at(0) };
 		EXPECT_EQ(s21, str1_can[0]);
-		EXPECT_EQ(s22, str1_can[0]);
 		EXPECT_EQ(s23, str1_can[0]);
 		EXPECT_EQ(s24, str1_can[0]);
 		EXPECT_THROW(d1.str_at(10), std::out_of_range);
@@ -228,10 +224,6 @@ namespace ciffileTest {
 		d2.push_back(val);
 		EXPECT_EQ(d2.back(), "654");
 
-		d2.emplace_back("321");
-		EXPECT_EQ(d2.back(), "321");
-
-
 	}
 
 	TEST(ciffile_Datavalue, modifiers_swap) {
@@ -313,20 +305,20 @@ namespace ciffileTest {
 
 	}
 
-	TEST(ciffile_Datavalue, nonmember) {
-		Datavalue d1{ { "123.4(5)", "456.7(4)", "78.9" } };
-		Datavalue d2{ { "123.4(5)", "456.7", "78.9" } };
-		Datavalue d3{ { "123.4(5)", "456.7(4)", "78.9" } };
+	//TEST(ciffile_Datavalue, nonmember) {
+	//	Datavalue d1{ { "123.4(5)", "456.7(4)", "78.9" } };
+	//	Datavalue d2{ { "123.4(5)", "456.7", "78.9" } };
+	//	Datavalue d3{ { "123.4(5)", "456.7(4)", "78.9" } };
 
-		EXPECT_TRUE(d1 == d3);
-		EXPECT_FALSE(d1 == d2);
+	//	EXPECT_TRUE(d1 == d3);
+	//	EXPECT_FALSE(d1 == d2);
 
-		swap(d2, d3);
+	//	swap(d2, d3);
 
-		EXPECT_FALSE(d1 == d3);
-		EXPECT_TRUE(d1 == d2);
+	//	EXPECT_FALSE(d1 == d3);
+	//	EXPECT_TRUE(d1 == d2);
 
-	}
+	//}
 
 
 
