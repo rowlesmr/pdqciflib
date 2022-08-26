@@ -75,7 +75,6 @@ namespace row::util {
 		return false;
 	}
 
-
 	template<typename C, typename F>
 	bool contains(const C& c, const F& f) {
 		return std::find(c.cbegin(), c.cend(), f) != c.cend();
@@ -93,7 +92,6 @@ namespace row::util {
 		};
 		return std::find_if(c.cbegin(), c.cend(), strincomp) != c.cend();
 	}
-
 
 	template <typename T>
 	void makeInRange(T& val, const T& minVal, const T& maxVal) {
