@@ -32,16 +32,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="include\row\pdqciflib\cifexcept.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\row\pdqciflib\ciffile.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\row\pdqciflib\cifparse.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="include\row\pdqciflib\util.cpp">
+    <ClCompile Include="include\row\pdqciflib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

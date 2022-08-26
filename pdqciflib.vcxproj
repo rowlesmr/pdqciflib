@@ -26,10 +26,7 @@
     <ClInclude Include="include\row\pdqciflib\util.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="include\row\pdqciflib\cifexcept.cpp" />
-    <ClCompile Include="include\row\pdqciflib\ciffile.cpp" />
-    <ClCompile Include="include\row\pdqciflib\cifparse.cpp" />
-    <ClCompile Include="include\row\pdqciflib\util.cpp" />
+    <ClCompile Include="include\row\pdqciflib.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
