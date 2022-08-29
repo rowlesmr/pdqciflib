@@ -28,12 +28,12 @@ using namespace row::util;
 
 
 TEST(Datavalue, DefaultConstruction) {
-
 	row::cif::Datavalue d{};
 	EXPECT_EQ(1, 1);
 	EXPECT_TRUE(true);
 	EXPECT_FALSE(d.isConverted());
-}
+}	
+	
 
 
 

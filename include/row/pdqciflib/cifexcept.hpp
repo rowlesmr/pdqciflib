@@ -13,12 +13,13 @@ namespace row::cif {
     namespace internal {
         class concreteException {
         private:
-            const char* m_msg;
+            std::string m_msg;
         public:
 			explicit concreteException(const char* msg) : m_msg(msg) {}
+			explicit concreteException(const std::string& msg) : m_msg(msg) {}
 
 			[[nodiscard]] const char* what() const noexcept {
-				return m_msg;
+				return m_msg.c_str();
 			}
         };
     } 
@@ -33,7 +34,7 @@ namespace row::cif {
 			: std::out_of_range(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		no_such_tag_error(const std::string& msg) 
-            : no_such_tag_error(msg.c_str()) {}
+            : std::out_of_range(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		[[nodiscard]] const char* what() const noexcept override {
 			return m_impl->what();
@@ -50,7 +51,7 @@ namespace row::cif {
 			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		tag_already_exists_error(const std::string& msg) 
-			: std::runtime_error(msg.c_str()),	m_impl(std::make_shared<internal::concreteException>(msg.c_str())) {}
+			: std::runtime_error(msg),	m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		[[nodiscard]] const char* what() const noexcept override {
 			return m_impl->what();
@@ -67,7 +68,7 @@ namespace row::cif {
 			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		loop_length_mismatch_error(const std::string& msg) 
-			: std::runtime_error(msg.c_str()), m_impl(std::make_shared<internal::concreteException>(msg.c_str())) {}
+			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		[[nodiscard]] const char* what() const noexcept override {
 			return m_impl->what();
@@ -84,7 +85,7 @@ namespace row::cif {
 			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		tag_value_mismatch_error(const std::string& msg) 
-			: std::runtime_error(msg.c_str()), m_impl(std::make_shared<internal::concreteException>(msg.c_str())) {}
+			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		[[nodiscard]] const char* what() const noexcept override {
 			return m_impl->what();
@@ -100,7 +101,7 @@ namespace row::cif {
 			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		illegal_tag_error(const std::string& msg) 
-			: illegal_tag_error(msg.c_str()) {}
+			: std::runtime_error(msg), m_impl(std::make_shared<internal::concreteException>(msg)) {}
 
 		[[nodiscard]] const char* what() const noexcept override {
 			return m_impl->what();

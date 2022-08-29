@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <utility>
 #include <string_view>
+#include <charconv>
 
 #include "util.hpp"
 #include "cifexcept.hpp"
@@ -104,6 +105,23 @@ namespace row::cif {
 		Datavalue(std::vector<std::string>&& in) : m_strs(std::move(in)) {}
 		Datavalue(std::initializer_list<std::string> in) : m_strs{ in } {}
 
+		Datavalue(double d) {
+			std::array<char, 25> str{};
+			auto result = std::to_chars(str.data(), str.data() + str.size(), d);
+			size_t count = result.ptr - str.data();
+			m_strs.emplace_back(str.data(), count);
+		}
+
+		Datavalue(std::vector<double> ds) {
+			std::array<char, 25> str{};
+			m_strs.reserve(ds.size());
+			for (double d : ds){
+				auto result = std::to_chars(str.data(), str.data() + str.size(), d);
+				size_t count = result.ptr - str.data();
+				m_strs.emplace_back(str.data(), count);
+			}
+		}
+
 		bool convert() const {
 			if (m_isConverted) {
 				return m_isConverted;
@@ -116,16 +134,16 @@ namespace row::cif {
 			if (!m_strs.empty()) {
 				auto [val, err] = row::util::stode(m_strs[0]);
 				if (val == row::util::NaN && err == row::util::NaN) {
-					m_isConverted = false;
 					m_dbls.clear();
 					m_errs.clear();
+					m_isConverted = true;
 					return m_isConverted;
 				}
 			}
 			else {
-				m_isConverted = false;
 				m_dbls.clear();
 				m_errs.clear();
+				m_isConverted = true;
 				return m_isConverted;
 			}
 
@@ -152,6 +170,24 @@ namespace row::cif {
 		bool isConverted() const {
 			return m_isConverted;
 		}
+
+		bool allNA() const {
+			return std::all_of(m_strs.cbegin(), m_strs.cend(), [](auto& s) { return s == "." || s == "?"; }) || m_strs.empty();
+		}
+
+		[[nodiscard]] bool isValid(){
+			if (m_strs.empty())
+				return false;
+
+			auto [val_ref, err_ref] = row::util::stode(m_strs[0]);
+			return std::all_of(m_strs.begin()+1, m_strs.end(), [&](const auto& s) {
+					auto [val, err] = row::util::stode(s);
+					bool first = (val == val_ref) || std::isnan(val);
+					bool second= (err == err_ref) || std::isnan(err);
+					return first && second;
+				});
+		}
+
 
 		//vector access
 		const std::vector<std::string>& getStrings() const {
@@ -532,8 +568,9 @@ namespace row::cif {
 		Block() = default;
 		explicit Block(bool ow) : overwrite(ow) {}
 
-		const_iterator addItem(dataname tag, Datavalue value) noexcept(false) {
-			if (tag.size() < 2 || tag[0] != '_') {
+
+		const_iterator addName(dataname tag) {
+			if (tag.empty() || tag.size() < 2 || tag[0] != '_') {
 				throw illegal_tag_error(tag);
 			}
 
@@ -547,12 +584,37 @@ namespace row::cif {
 				m_item_order.emplace_back(tag);
 			}
 
-			const auto& [it, _] = m_block.insert({ std::move(tag), std::move(value) });
+			const auto& [it, _] = m_block.insert({ tag, {} });
 			// need to convert the iterator to one of mine
 			return { &(*it), this };
 		}
 
+		const_iterator assignValue(const dataname& tag, Datavalue value) {
+			if (!contains(tag)) {
+				throw no_such_tag_error(tag);
+			}
+			if (value.empty()) {
+				throw tag_value_mismatch_error("Value is empty. Must have at least 1.");
+			}
+
+			auto it = m_block.find(tag);
+			it->second = value;
+
+			// need to convert the iterator to one of mine
+			return { &(*it), this };
+		}
+
+
+		const_iterator addItem(const dataname& tag, Datavalue value) noexcept(false) {
+			addName(tag);
+			return assignValue(tag, value);
+		}
+
+
 		const_iterator addItems(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
+			if (tags.empty() || values.empty()) {
+				throw tag_value_mismatch_error(std::format("Can't have no values. {} tags and {} values", tags.size(), values.size()));
+			}
 			if (tags.size() != values.size()) {
 				throw tag_value_mismatch_error(std::format("{} tags and {} values", tags.size(), values.size()));
 			}
@@ -565,7 +627,12 @@ namespace row::cif {
 			return it;
 		}
 
+
 		const_iterator addItemsAsLoop(const std::vector<dataname>& tags, const std::vector<Datavalue>& values) noexcept(false) {
+			if (tags.empty() || values.empty()) {
+				throw tag_value_mismatch_error(std::format("Can't have no values. {} tags and {} values", tags.size(), values.size()));
+			}
+
 			size_t len{ values[0].size() };
 			if (!(std::all_of(values.cbegin(), values.cend(), [len](const auto& value) { return value.size() == len; }))) {
 				throw loop_length_mismatch_error("Different number of values per tag in loop");
@@ -575,8 +642,14 @@ namespace row::cif {
 			return createLoop(tags);
 		}
 
-		const_iterator createLoop(std::vector<dataname> tags) noexcept(false) {
 
+		const_iterator createLoop(std::vector<dataname> tags) noexcept(false) {
+			if (tags.empty()) {
+				throw illegal_tag_error("No tags given.");
+			}
+
+			row::util::toLower_i(tags);
+			
 			//check that all tags exist, and have all the same length values
 			size_t len{ m_block[tags[0]].size() };
 			for (const auto& tag : tags) {
@@ -634,6 +707,7 @@ namespace row::cif {
 			return find(m_loops[loopNum][0]);
 		}
 
+
 		const_iterator addNameToLoop(dataname newName, const dataname_view oldName) noexcept(false) {
 			row::util::toLower_i(newName);
 
@@ -663,6 +737,7 @@ namespace row::cif {
 
 			return find(newName);
 		}
+
 
 		const_iterator removeItem(const dataname_view tag) {
 			if (!contains(tag)) {
@@ -701,6 +776,31 @@ namespace row::cif {
 			return returnMe;
 		}
 
+
+		void removeEmpties(){
+			std::vector<dataname> tags = getAllTags(); // because I don't knwo what happens when loop
+			                                           // over somehting while I'm deleting it...
+			for(const dataname& tag : tags){
+				if(getValue(tag).allNA()){
+					removeItem(tag);
+				}
+			}
+			return;
+		}
+
+		//bool isValid() {
+		//	if (m_strs.empty())
+		//		return false;
+
+		//	auto [val_ref, err_ref] = row::util::stode(m_strs[0]);
+		//	return std::all_of(m_strs.begin() + 1, m_strs.end(), [&](const auto& s) {
+		//		auto [val, err] = row::util::stode(s);
+		//		bool first = (val == val_ref) || std::isnan(val);
+		//		bool second = (err == err_ref) || std::isnan(err);
+		//		return first && second;
+		//		});
+		//}
+
 		int getLoopNum(const dataname_view tag) const {
 			for (auto& [k, v] : m_loops) {
 				if (row::util::icontains(v, tag)) { //contains needs to do a case insensitive comparision
@@ -709,6 +809,7 @@ namespace row::cif {
 			}
 			return -1;
 		}
+
 
 		const std::vector<dataname>& getLoopNames(const dataname_view tag) const noexcept(false) {
 			for (auto& [_, vs] : m_loops) {
@@ -859,14 +960,18 @@ namespace row::cif {
 			return std::format("{1:{0}}", len, tag);
 		}
 
-		std::string formatValue(std::string value) const {
+		std::string formatValue(const std::string_view value) const {
+			if(value.empty()){
+				return "";
+			}
+
 			if (value.find('\n') != std::string::npos) {
-				value = "\n;\n" + value + "\n;"; //its a semicolon textfield
+				return std::format("\n;\n{0}\n;\n", value); //its a semicolon textfield
 			}
-			else if (value.find(' ') != std::string::npos || value[0] == '_') {
-				value = "\"" + value + "\""; //it's a string that needs delimiting
+			if (value.find(' ') != std::string::npos || value[0] == '_') {
+				return std::format("\"{0}\"", value); //it's a string that needs delimiting
 			}
-			return value;
+			return std::string(value);
 		}
 
 		void print(bool pretty = true) const {
@@ -912,14 +1017,14 @@ namespace row::cif {
 					for (size_t i{ 0 }; i < loopLen; ++i) {
 						for (size_t j{ 0 }; j < m_loops.at(loopNum).size(); ++j) {
 							const std::string& tag{ m_loops.at(loopNum)[j] };
-							block += '\t' + makeStringLength(m_block.at(tag).at(i), colWidths[j]);
+							block += '\t' + makeStringLength(formatValue(m_block.at(tag).at(i)), colWidths[j]);
 						}
 						block += '\n';
 					}
 				}
 				else { // it's a plain dataitem
-					const std::string& loopTag = std::get<std::string>(item);
-					block += makeStringLength(loopTag, maxTagLen) + '\t' + formatValue(m_block.at(loopTag).at(0)) + '\n';
+					const std::string& tag = std::get<std::string>(item);
+					block += makeStringLength(tag, maxTagLen) + '\t' + formatValue(m_block.at(tag).at(0)) + '\n';
 				}
 			}
 			return block;
@@ -988,8 +1093,6 @@ namespace row::cif {
 		}
 
 		// Lookup
-
-		//Lookup
 		const Datavalue& at(const dataname_view tag) const {
 			return get(tag);
 		}
@@ -1003,13 +1106,21 @@ namespace row::cif {
 			if (it == m_block.end()) {
 				return cend();
 			}
-
 			return { &(*it), this };
 		}
 
 		bool contains(const dataname_view tag) const {
 			return m_block.contains(tag);
 		}
+
+		//this is the only way in to alter a Datavalue
+		Datavalue& operator[](const dataname_view tag){
+			if (contains(tag)) {
+				return m_block.find(tag)->second;
+			}
+			throw no_such_tag_error(std::format("{} does not exist.", tag));
+		}
+
 
 		//iterator implementation
 		//struct Iterator
@@ -1306,6 +1417,7 @@ namespace row::cif {
 			return;
 		}
 
+		//struct iterator;
 		struct const_iterator;
 
 	public:
@@ -1365,6 +1477,9 @@ namespace row::cif {
 		}
 
 		const_iterator addBlocks(const std::vector<blockname>& names, const std::vector<Block>& blocks) {
+			if (names.empty() || blocks.empty()) {
+				throw tag_value_mismatch_error(std::format("Can't be empty. {} names and {} blocks", names.size(), blocks.size()));
+			}
 			if (names.size() != blocks.size()) {
 				throw tag_value_mismatch_error(std::format("{} names and {} blocks", names.size(), blocks.size()));
 			}
@@ -1452,6 +1567,14 @@ namespace row::cif {
 		//iterators
 
 		//iterators
+		//iterator begin()  noexcept {
+		//	return { ptrToFirstBlock(), this };
+		//}
+
+		//iterator end() noexcept {
+		//	return { nullptr, this };
+		//}
+
 		const_iterator begin() const noexcept {
 			return { constptrToFirstBlock(), this };
 		}
@@ -1542,6 +1665,18 @@ namespace row::cif {
 
 		bool contains(const blockname_view name) const {
 			return m_cif.contains(name);
+		}
+
+		//this is the one access in that allows arbitrary modification of a block.
+		Block& operator[](const blockname_view name){
+			if (contains(name)) {
+				return m_cif.find(name)->second; //can't use .at() as it doesn't support the inesnitive case lookup
+			}
+			throw no_such_tag_error(std::format("{} does not exist.", name));
+		}
+
+		const std::vector<dataname>& getAllNames() const {
+			return m_block_order;
 		}
 
 

@@ -71,8 +71,8 @@ namespace row::cif {
         struct numeric : pegtl::seq<pegtl::plus<ordinarychar>, pegtl::at<wschar>> {};
 
         //Tags and values
-        struct tag : pegtl::seq<pegtl::one<'_'>, pegtl::plus<nonblankchar>> {};
-        struct value : pegtl::sor<numeric, textfield, charstring> {};
+        struct tag : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed tag name.")>> {};      
+        struct value : pegtl::sor<numeric, textfield, charstring> {}; //need to check for textfield first, as a charstring can start with a semicolon
         struct itemtag : tag {};
         struct itemvalue : value {};
         struct looptag : tag {};
@@ -92,7 +92,11 @@ namespace row::cif {
         //item
         struct dataitem : pegtl::sor<pair, loop> {};
 
-        struct blockframecode : pegtl::star<nonblankchar> {};
+        // block name
+        // data_NAME -> the name is "NAME". The match below shoule be pegtl::plus<nonblankchar>, but there exist otherwise valid
+        // CIF files where the name is empty, so I've allowed the name to be empty. I've left the error message in there, as it
+        // isn't doing any harm (I think)
+        struct blockframecode : pegtl::sor <pegtl::star<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed block name.")> {};
 
         //saveframe
         struct saveframeend : SAVE {};
@@ -208,7 +212,7 @@ namespace row::cif {
                 out.addName(in.string());
             }
             catch (tag_already_exists_error&) {
-                throw pegtl::parse_error("Duplicate blockname found: " + in.string(), in);
+                throw pegtl::parse_error(std::format("Duplicate blockname found: {0}", in.string()), in);
             }
             status.reset();
         }
@@ -224,6 +228,13 @@ namespace row::cif {
         template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& out, [[maybe_unused]] Status& status, Buffer& buffer) {
             buffer.clear();
             buffer.tag = in.string();
+            Block& block = out.getLastBlock();
+			try {
+				block.addName(buffer.tag);
+			}
+			catch (tag_already_exists_error&) {
+				throw pegtl::parse_error(std::format("Duplicate tag found: {0}", in.string()), in);
+			}
         }
     };
 
@@ -232,10 +243,10 @@ namespace row::cif {
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
                 Block& block = out.getLastBlock();
                 try {
-                    block.addItem(std::move(buffer.tag), in.string());
+                    block.assignValue(buffer.tag, in.string());
                 }
-                catch (tag_already_exists_error&) {
-                    throw pegtl::parse_error("Duplicate tag found: " + in.string(), in);
+                catch (no_such_tag_error&) {
+                    throw pegtl::parse_error(std::format("Tag not found: {0}", in.string()), in);
                 }
                 status.just_printed();
             }
@@ -273,18 +284,22 @@ namespace row::cif {
 
     template<> struct Action<rules::loop> { //this is the end of a loop
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
-            Block& block = out.getLastBlock();           
+            if(buffer.values.empty()) [[unlikely]] {
+                throw pegtl::parse_error("No values given in loop.", in);
+            }
+
+            Block& block = out.getLastBlock();     
             try {
                 block.addItemsAsLoop(buffer.tags, buffer.values);
             }
-            catch (const tag_already_exists_error&) {
-                throw pegtl::parse_error("Tag in loop already exists", in);
+            catch (const tag_already_exists_error& e) {
+                throw pegtl::parse_error(std::format("Tag \"{0}\" in loop already exists", std::string(e.what())), in);
             }
             catch (const loop_length_mismatch_error&) {
                 size_t should_be_zero = buffer.totalValues % buffer.tagNum;
                 std::string too_many{ std::to_string(should_be_zero) };
                 std::string too_few{ std::to_string(buffer.tagNum - should_be_zero) };
-                throw pegtl::parse_error(too_few + " too few, or " + too_many + " too many, values in loop.", in);
+                throw pegtl::parse_error(std::format("{0} too few, or {1} too many, values in loop.", too_few, too_many), in);
             }
             status.loop();
         }
