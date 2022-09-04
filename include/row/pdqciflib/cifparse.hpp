@@ -63,7 +63,7 @@ namespace row::cif {
 
         struct singlequotedstring : quoted<pegtl::one<'\''>> {};
         struct doublequotedstring : quoted<pegtl::one<'"'>> {};
-        struct unquotedstring : pegtl::seq<pegtl::not_at<reserved>, pegtl::not_at<pegtl::one<'_', '$', '#'>>, pegtl::plus<nonblankchar>> {};
+        struct unquotedstring : pegtl::seq<pegtl::not_at<reserved>, pegtl::not_at<pegtl::one<'_', '$', '#', '['>>, pegtl::plus<nonblankchar>> {};
         struct charstring : pegtl::sor<singlequotedstring, doublequotedstring, unquotedstring> {};
 
         // for pdCIF, most values will be numeric. But we don't care about their specific type, we just suck up their
@@ -71,7 +71,7 @@ namespace row::cif {
         struct numeric : pegtl::seq<pegtl::plus<ordinarychar>, pegtl::at<wschar>> {};
 
         //Tags and values
-        struct tag : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed tag name.")>> {};      
+        struct tag : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed tag name.")>> {};
         struct value : pegtl::sor<numeric, textfield, charstring> {}; //need to check for textfield first, as a charstring can start with a semicolon
         struct itemtag : tag {};
         struct itemvalue : value {};
@@ -96,7 +96,7 @@ namespace row::cif {
         // data_NAME -> the name is "NAME". The match below shoule be pegtl::plus<nonblankchar>, but there exist otherwise valid
         // CIF files where the name is empty, so I've allowed the name to be empty. I've left the error message in there, as it
         // isn't doing any harm (I think)
-        struct blockframecode : pegtl::sor <pegtl::star<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed block name.")> {};
+        struct blockframecode : pegtl::sor<pegtl::star<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed block name.")> {};
 
         //saveframe
         struct saveframeend : SAVE {};
@@ -339,7 +339,7 @@ namespace row::cif {
                     << in.line_at(p) << '\n'
                     << std::setw(p.column) << '^' << std::endl;
             }
-            throw std::runtime_error("Parsing error.");
+            throw std::runtime_error("Parsing error -> " + std::string(e.what()));
         }
     }
 

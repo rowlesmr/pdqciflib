@@ -221,6 +221,10 @@ namespace row::cif {
 			return m_errs.at(pos);
 		}
 
+		const std::string& operator[](size_t i) const{
+			return m_strs[i];
+		}
+
 
 		// extreme iterators
 		constexpr const_reference front() const {
@@ -966,9 +970,9 @@ namespace row::cif {
 			}
 
 			if (value.find('\n') != std::string::npos) {
-				return std::format("\n;\n{0}\n;\n", value); //its a semicolon textfield
+				return std::format("\n;{0}\n;\n", value); //its a semicolon textfield
 			}
-			if (value.find(' ') != std::string::npos || value[0] == '_') {
+			if (value.find(' ') != std::string::npos || value[0] == '_' || value[0] == '[') {
 				return std::format("\"{0}\"", value); //it's a string that needs delimiting
 			}
 			return std::string(value);
