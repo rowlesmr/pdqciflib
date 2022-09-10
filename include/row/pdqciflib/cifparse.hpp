@@ -24,14 +24,14 @@ namespace row::cif {
         struct reserved : pegtl::sor<DATA, LOOP, SAVE, GLOBAL, STOP> {};
 
         //character sets
-        //OrdinaryChar:	{ '!' | '%' | '&' | '(' | ')' | '*' | '+' | ',' | '-' | '.' | '/' | '0' 
-        //              | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | ':' | '<' | '=' 
-        //              | '>' | '?' | '@' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' 
-        //              | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' 
-        //              | 'V' | 'W' | 'X' | 'Y' | 'Z' | '\' | '^' | '`' | 'a' | 'b' | 'c' | 'd' 
-        //              | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' 
-        //              | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z' | '{' | '|' 
-        //              | '}' | '~' }	
+        //OrdinaryChar:	{ '!' | '%' | '&' | '(' | ')' | '*' | '+' | ',' | '-' | '.' | '/' | '0'
+        //              | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | ':' | '<' | '='
+        //              | '>' | '?' | '@' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I'
+        //              | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U'
+        //              | 'V' | 'W' | 'X' | 'Y' | 'Z' | '\' | '^' | '`' | 'a' | 'b' | 'c' | 'd'
+        //              | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p'
+        //              | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z' | '{' | '|'
+        //              | '}' | '~' }
         //NonBlankChar:	OrdinaryChar | dquote | '#' | '$' | squote | '_' |           ';' | '[' | ']'
         //TextLeadChar:	OrdinaryChar | dquote | '#' | '$' | squote | '_' | SP | HT |       '[' | ']'
         //AnyPrintChar:	OrdinaryChar | dquote | '#' | '$' | squote | '_' | SP | HT | ';' | '[' | ']'
@@ -42,19 +42,32 @@ namespace row::cif {
 
         //Whitespace and comments
         struct comment : pegtl::if_must<pegtl::one<'#'>, pegtl::until<pegtl::eolf>> {};
-        struct ws : pegtl::one<' ', '\t'> {};
+        struct ws : pegtl::blank {}; // pegtl::one<' ', '\t'>
         struct wschar : pegtl::space {}; //pegtl::one<' ', '\n', '\r', '\t', '\v', '\f'>
         struct whitespace : pegtl::plus<pegtl::sor<wschar, comment>> {};
         struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
 
-        //character text fields and strings
+        //character text fields
         struct field_sep : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
         struct end_field_sep : pegtl::seq<pegtl::star<ws>, pegtl::plus<pegtl::eol>, field_sep> {};
-        struct leading_ws : pegtl::star<pegtl::not_at<pegtl::sor<nonblankchar, end_field_sep>>, pegtl::sor<ws, pegtl::eol>> {};
         struct sctf_text : pegtl::star<pegtl::not_at<end_field_sep>, pegtl::sor<anyprintchar, pegtl::eol>> {};
-        struct semicolontextfield : pegtl::if_must<field_sep, leading_ws, sctf_text, end_field_sep> {};
-        struct textfield : semicolontextfield {};
+		struct semicolontextfield : pegtl::if_must<field_sep, sctf_text, end_field_sep> {};
 
+        //rules for folded semicolon textfields
+        struct fsctf_start : pegtl::seq<field_sep, pegtl::one<'\\'>, pegtl::eol> {};
+        struct fsctf_text_for_parsing : sctf_text {};
+        struct foldedsemicolontextfield : pegtl::if_must<fsctf_start, fsctf_text_for_parsing, end_field_sep> {};
+
+        struct fsctf_continuation : pegtl::seq < pegtl::one<'\\'>, pegtl::star<pegtl::blank>, pegtl::eol> {};
+        struct fsctf_text : pegtl::plus<pegtl::not_at<fsctf_continuation>, pegtl::sor<anyprintchar, pegtl::eol>> {};
+        struct fsctf_line_without_continuation : fsctf_text {};
+        struct fsctf_line_with_continuation : pegtl::seq<fsctf_text, fsctf_continuation> {};
+        struct fsctf_grammar : pegtl::seq<pegtl::star<pegtl::plus<fsctf_line_with_continuation>, pegtl::star<fsctf_line_without_continuation>>, fsctf_line_without_continuation> {};
+
+        struct textfield : pegtl::sor<foldedsemicolontextfield, semicolontextfield> {};
+
+
+        //quoted and unquoted strings
         template<typename Q> struct endq : pegtl::seq<Q, pegtl::at<pegtl::sor<pegtl::one<' ', '\n', '\r', '\t', '#'>, pegtl::eof>>> {}; //what is the end of a quoted string
         template<typename Q> struct quote_text : pegtl::seq<pegtl::star<pegtl::not_at<endq<Q>>, anyprintchar>> {};
         struct unquoted_text : pegtl::plus<nonblankchar> {};
@@ -119,11 +132,13 @@ namespace row::cif {
         bool is_loop{ false };
         bool is_quote{ false };
         bool is_printed{ false };
+        bool is_fsctf{ false };
 
 		void reset() {
 			is_loop = false;
 			is_quote = false;
 			is_printed = false;
+            is_fsctf = false;
 		}
 
 		void get_ready_to_print() {
@@ -133,6 +148,7 @@ namespace row::cif {
 
 		void just_printed() {
 			is_printed = true;
+            is_fsctf = false;
 		}
 
 		void finished_printing() {
@@ -150,7 +166,8 @@ namespace row::cif {
     //to temporarily store data before putting it in the Cif object
     struct Buffer {
         dataname tag{};
-
+        
+        std::string fsctf_string{};
         std::vector<dataname> tags{};
         std::vector<Datavalue> values{};
         size_t loopNum{};
@@ -177,13 +194,14 @@ namespace row::cif {
 		}
 
 		void clear() {
-			tag.clear();
-			tags.clear();
-			values.clear();
-			loopNum = 0;
-			maxLoop = 0;
-			totalValues = 0;
-			tagNum = 0;
+            tag.clear();
+            fsctf_string.clear();
+            tags.clear();
+            values.clear();
+            loopNum = 0;
+            maxLoop = 0;
+            totalValues = 0;
+            tagNum = 0;
 		}
     };
 
@@ -205,6 +223,9 @@ namespace row::cif {
     //********************
     template<typename Rule>
     struct Action : pegtl::nothing<Rule> {};
+
+	template<typename Rule>
+	struct Action_inner : pegtl::nothing<Rule> {};
 
     template<> struct Action<rules::blockframecode> {
         template<typename Input> static void apply(const Input& in, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer) {
@@ -243,7 +264,12 @@ namespace row::cif {
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
                 Block& block = out.getLastBlock();
                 try {
-                    block.assignValue(buffer.tag, in.string());
+                    if(status.is_fsctf){
+                        block.assignValue(buffer.tag, buffer.fsctf_string);
+                    }
+                    else {
+                        block.assignValue(buffer.tag, in.string());
+                    }
                 }
                 catch (no_such_tag_error&) {
                     throw pegtl::parse_error(std::format("Tag not found: {0}", in.string()), in);
@@ -271,9 +297,14 @@ namespace row::cif {
 
     template<> struct Action<rules::loopvalue> {
         template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& out, Status& status, Buffer& buffer) {
-            buffer.initialiseValues();           
+            buffer.initialiseValues();
             if (!status.is_quote || (status.is_quote && !status.is_printed)) [[likely]] {
-                buffer.appendValue(in.string());                 
+				if (status.is_fsctf) {
+					buffer.appendValue(buffer.fsctf_string);
+				}
+				else {
+					buffer.appendValue(in.string());
+				}
                 status.just_printed();
             }
             else {
@@ -288,7 +319,7 @@ namespace row::cif {
                 throw pegtl::parse_error("No values given in loop.", in);
             }
 
-            Block& block = out.getLastBlock();     
+            Block& block = out.getLastBlock();
             try {
                 block.addItemsAsLoop(buffer.tags, buffer.values);
             }
@@ -322,9 +353,38 @@ namespace row::cif {
             divert_action_to_value(in, out, status, buffer);
         }
     };
-        
 
-    template<typename Input> 
+	template<> struct Action_inner<rules::fsctf_text> {
+		template<typename Input> static void apply(const Input& in, std::string& out) {
+			out += in.string();
+ 		}
+	};
+
+
+	template<> struct Action<rules::fsctf_text_for_parsing> {
+        template<typename Input> static void apply(const Input& in, Cif& out, Status& status, Buffer& buffer) {
+            if(!status.is_fsctf){
+                buffer.fsctf_string.clear();
+            }
+            status.is_fsctf = true;
+
+            pegtl::string_input i2(in.string(), "from fsctf");
+            try {
+                tao::pegtl::parse_nested< rules::fsctf_grammar, Action_inner >(in, i2, buffer.fsctf_string);
+            }
+			catch (pegtl::parse_error& e) {
+				const auto p = e.positions().front();
+				//pretty-print the error msg and the line that caused it, with an indicator at the token that done it.
+				std::cerr << e.what() << '\n'
+					<< i2.line_at(p) << '\n'
+					<< std::setw(p.column) << '^' << std::endl;
+				throw std::runtime_error("Parsing error -> " + std::string(e.what()));
+			}
+            divert_action_to_value(in, out, status, buffer);
+        }
+	};
+
+    template<typename Input>
     void parse_input(Cif& d, Input&& in, bool printErr = true) noexcept(false) {
         try {
             Status status{};
@@ -343,7 +403,7 @@ namespace row::cif {
         }
     }
 
-    template<typename Input> 
+    template<typename Input>
     Cif read_input(Input&& in, bool overwrite = false, bool printErr = true)  noexcept(false) {
         Cif cif{ in.source() };
         cif.overwrite(overwrite);
