@@ -964,9 +964,28 @@ namespace row::cif {
 			return std::format("{1:{0}}", len, tag);
 		}
 
-		std::string formatValue(const std::string_view value) const {
+		std::string formatValue(std::string_view value) const {
 			if(value.empty()){
 				return "";
+			}
+
+			size_t maxLineLength { 2048 };
+			if(value.size() > maxLineLength) { //it's a string that needs folding
+				//technically it should be the length between successive eol markers, rather
+				//than the length of the string.
+				std::string r{};
+				r.reserve(value.size() + 2*(value.size()/ maxLineLength));
+				size_t count{ maxLineLength-1 };
+				while(value.size() > maxLineLength){
+					size_t i{ count };
+					while(value[i] == ';') { //otherwise you end up with ';' as the first character on the next line, which ruins the parse the next time you read it.
+						--i;
+					}
+					r += std::string(value.substr(0, i)) + "\\\n";
+					value.remove_prefix(i);
+				}
+				r += std::string(value.substr(0, value.size()));
+				return std::format("\n;\\\n{0}\n;\n", r); //its a folded semicolon textfield
 			}
 
 			if (value.find('\n') != std::string::npos) {
@@ -1560,7 +1579,7 @@ namespace row::cif {
 
 
 		std::string to_string(bool pretty = true) const {
-			std::string cif{};
+			std::string cif{ "#\\#CIF_1.1\n" };
 			for (const auto& block : m_block_order) {
 				cif += "\ndata_" + block + '\n';
 				cif += m_cif.at(block).to_string(pretty);
