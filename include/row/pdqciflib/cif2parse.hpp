@@ -24,19 +24,20 @@ namespace row::cif
         struct GLOBAL : TAO_PEGTL_ISTRING("global_") {};
         struct SAVE : TAO_PEGTL_ISTRING("save_") {};
         struct STOP : TAO_PEGTL_ISTRING("stop_") {};
+		struct reserved : pegtl::sor<DATA, LOOP, SAVE, GLOBAL, STOP> {};
 
         
         //character sets
 		//almost all of unicode, as per CIF2.0 grammar
 		struct allchars : pegtl8::ranges<0x0009, 0x0009, 0x000A, 0x000A, 0x000D, 0x000D, 0x0020, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD> {};
-		//allchars - ('\n', '\r')
+		//allchars - ('\r', '\n')
 		struct char_ : pegtl8::ranges<0x0009, 0x0009, 0x0020, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
 		//char_ - (' ', '\t')
 		struct non_blank_char : pegtl8::ranges<0x0021, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
 		//non_blank_char - ('[', ']', '{', '}')
-		//struct restrict_char : pegtl8::ranges<0x0021, 0x005A, 0x005C, 0x005C, 0x005E, 0x007A, 0x007C, 0x007C, 0x007E, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
+		struct restrict_char : pegtl8::ranges<0x0021, 0x005A, 0x005C, 0x005C, 0x005E, 0x007A, 0x007C, 0x007C, 0x007E, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
 		//restrict_char - ('"', '#', '$', "'", '_')
-		//struct lead_char : pegtl8::ranges<0x0021, 0x0021, 0x0025, 0x0026, 0x0028, 0x005A, 0x005C, 0x005C, 0x005E, 0x005E, 0x0060, 0x007A, 0x007C, 0x007C, 0x007E, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
+		struct lead_char : pegtl8::ranges<0x0021, 0x0021, 0x0025, 0x0026, 0x0028, 0x005A, 0x005C, 0x005C, 0x005E, 0x005E, 0x0060, 0x007A, 0x007C, 0x007C, 0x007E, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD>{};
     
 		//allchars - ("'")
         struct not_3apostrophe : pegtl8::ranges<0x0009, 0x0009, 0x000A, 0x000A, 0x000D, 0x000D, 0x0020, 0x0026, 0x0028, 0x007E, 0x00A0, 0xD7FF, 0xE000, 0xFDCF, 0xFDF0, 0xFFFD, 0x10000, 0x1FFFD, 0x20000, 0x2FFFD, 0x30000, 0x3FFFD, 0x40000, 0x4FFFD, 0x50000, 0x5FFFD, 0x60000, 0x6FFFD, 0x70000, 0x7FFFD, 0x80000, 0x8FFFD, 0x90000, 0x9FFFD, 0xA0000, 0xAFFFD, 0xB0000, 0xBFFFD, 0xC0000, 0xCFFFD, 0xD0000, 0xDFFFD, 0xE0000, 0xEFFFD, 0xF0000, 0xFFFFD, 0x100000, 0x10FFFD> {};
@@ -51,36 +52,19 @@ namespace row::cif
 
 
 
-        //Whitespace, line termination, and comments
-        struct line_term : pegtl::sor<pegtl::seq<pegtl::one<'\r'>,pegtl::opt<pegtl::one<'\n'>>>, pegtl::one<'\n'>> {};
-        struct inline_wspace : pegtl::one<' ', '\t'> {};
-        struct comment : pegtl::seq<pegtl::one<'#'>, 
-			                        pegtl::star<char_>
-		                           > {};
-		//struct comment : pegtl::if_must<pegtl::one<'#'>,
-		//	                            pegtl::star<char_>
-		//> {};
-        struct wspace_to_eol : pegtl::seq<pegtl::star<inline_wspace>, 
-			                              pegtl::opt<comment>, 
-			                              line_term
-		                                 > {};
-        struct wspace_any : pegtl::seq<pegtl::star<wspace_to_eol>, 
-			                           pegtl::star<inline_wspace>
-		                              > {};
-        struct wspace_lines : pegtl::seq<pegtl::opt<pegtl::plus<inline_wspace>, 
-			                                        pegtl::opt<comment>
-		                                           >, 
-			                             line_term, 
-			                             pegtl::star<wspace_to_eol>
-		                                > {};
-        struct wspace : pegtl::seq<pegtl::sor<inline_wspace, line_term>, 
-			                       wspace_any
-		                          > {};
+        //Whitespace, and comments
+		struct comment : pegtl::if_must<pegtl::one<'#'>, pegtl::until<pegtl::eolf>> {};
+		struct ws : pegtl::blank {}; // pegtl::one<' ', '\t'>
+		struct wschar : pegtl::space {}; //pegtl::one<' ', '\n', '\r', '\t', '\v', '\f'>
+		struct whitespace : pegtl::plus<pegtl::sor<wschar, comment>> {};
+		struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
+
 
         //text block
-        struct text_delim : pegtl::seq<line_term, pegtl::one<';'>> {};
-		struct text_content : allchars {};
-		struct text_field : pegtl::seq<text_delim, pegtl::until<text_delim, text_content>> {};
+		struct text_delim : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
+		struct end_text_delim : text_delim {}; // pegtl::seq<pegtl::star<ws>, line_term, text_delim> {};
+		struct text_content : pegtl::star<pegtl::not_at<end_text_delim>, pegtl::sor<allchars, pegtl::eol>> {};
+		struct text_field : pegtl::if_must<text_delim, text_content, end_text_delim> {};
 
         //triple-quote block
         struct apostrophe3_delim : TAO_PEGTL_STRING("'''") {};
@@ -105,13 +89,8 @@ namespace row::cif
 
 		struct single_quoted_string : pegtl::sor<quote1, apostrophe1> {};
 
-        //strings and values
-		struct restrict_char_removal : pegtl::sor<pegtl::one<'['>, pegtl::one<']'>, pegtl::one<'{'>, pegtl::one<'}'>> {};;
-		struct lead_char_removal : pegtl::sor<pegtl::one<'"'>, pegtl::one<'#'>, pegtl::one<'$'>, pegtl::one<'\''>, pegtl::one<'_'>> {};;
-		struct restrict_char : pegtl::seq<pegtl::not_at<restrict_char_removal>, non_blank_char> {};
-		struct lead_char : pegtl::seq<pegtl::not_at<lead_char_removal>, restrict_char> {};
-
-        struct wsdelim_string : pegtl::seq<
+        //unquoted string
+        struct unquoted_string : pegtl::seq<
 			                               pegtl::not_at<
 			                                             pegtl::sor<
 			                                                        pegtl::seq<
@@ -123,130 +102,99 @@ namespace row::cif
 			                               lead_char, 
 			                               pegtl::star<restrict_char>
 		                                  > {};
-		//struct wsdelim_string_sol : pegtl::seq<pegtl::not_at<pegtl::seq<pegtl::one<';'>, pegtl::star<non_blank_char>>>, wsdelim_string> {};
-		struct wsdelim_string_sol : pegtl::minus<wsdelim_string, pegtl::seq<pegtl::one<';'>, pegtl::star<non_blank_char>>>{};
 
-        struct lst;
-        struct table;
+		//other values
+		struct lst;
+		struct table;
 
-        struct nospace_value : pegtl::sor<triple_quoted_string, single_quoted_string, lst, table> {};
-		struct wspace_data_value : pegtl::sor<pegtl::seq<wspace, nospace_value>,
-                                              pegtl::seq<pegtl::opt<wspace_lines>, pegtl::plus<inline_wspace>, wsdelim_string>,
-			                                  pegtl::seq<wspace_lines, wsdelim_string_sol>,
-			                                  pegtl::seq<pegtl::opt<wspace>, pegtl::opt<comment>, text_field>
-                                             > {};
-
-		struct rowles_data_value : pegtl::sor<pegtl::seq<wspace, nospace_value>,
-			pegtl::seq<pegtl::opt<wspace_lines>, pegtl::plus<inline_wspace>, wsdelim_string>,
-			pegtl::seq<wspace_lines, wsdelim_string_sol>,
-			pegtl::seq<pegtl::opt<wspace>, pegtl::opt<comment>, text_field>
-		>
-		{};
-
-
-
-		//struct wspace_data_value : pegtl::seq<pegtl::opt<wspace>, pegtl::opt<comment>, text_field>{};
+		struct value : pegtl::sor<text_field, unquoted_string, triple_quoted_string, single_quoted_string, lst, table> {};
 
         //table
 		struct table_key : pegtl::sor<triple_quoted_string, single_quoted_string> {};
-		struct table_value : pegtl::sor<nospace_value, wsdelim_string, wspace_data_value> {};
-        struct table_entry : pegtl::if_must<table_key, pegtl::one<':'>, table_value> {};
+		struct table_value : value {};
+        struct table_entry : pegtl::if_must<table_key, pegtl::one<':'>, pegtl::opt<whitespace>, table_value> {};
 		struct table_begin : pegtl::one<'{'> {};
 		struct table_end : pegtl::one<'}'> {};
 		struct table : pegtl::if_must <
 			                      table_begin,
-			                      pegtl::opt<
-			                                 wspace_any, 
-			                                 table_entry, 
-			                                 pegtl::star<wspace, table_entry>
-								            >, 
-			                      pegtl::opt<wspace>, 
+			                      pegtl::opt<pegtl::opt<whitespace>, table_entry, pegtl::star<whitespace, table_entry>>,
+			                      pegtl::opt<whitespace>,
 			                      table_end
 		                         >{};
 
-        //list
-        struct list_values_start : pegtl::sor<
-			                                  pegtl::seq<wspace_any, nospace_value>,
-			                                  pegtl::seq<wspace_any, pegtl::opt<comment>, text_field>,
-			                                  pegtl::seq<pegtl::opt<pegtl::star<wspace_to_eol>, pegtl::plus<inline_wspace>>, wsdelim_string>,
-			                                  pegtl::seq<pegtl::plus<wspace_to_eol>, wsdelim_string_sol>
-                                             >{};
+		//list
 		struct lst_begin : pegtl::one<'['> {};
 		struct lst_end : pegtl::one<']'> {};
-		struct lst_value : pegtl::opt<list_values_start, pegtl::star<wspace_data_value>> {};
+		struct lst_value : value {};
+		struct lst_values : pegtl::opt<pegtl::opt<whitespace>, lst_value, pegtl::star<whitespace, lst_value>> {};
 		struct lst : pegtl::if_must<
 			                    lst_begin,
-			                    lst_value, 
-			                    pegtl::opt<wspace>, 
+			                    lst_values, 
+			                    pegtl::opt<whitespace>,
 			                    lst_end
 		                       > {};
 
 
-        //Tag    
-		struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::plus<non_blank_char>> {}; //pegtl::sor<pegtl::plus<non_blank_char>, TAO_PEGTL_RAISE_MESSAGE("Malformed tag name.")>
+        //Data name    
+		struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<non_blank_char>, TAO_PEGTL_RAISE_MESSAGE("Malformed data name.")>> {};
 
         //Loop
+		struct loop_begin : pegtl::seq<LOOP, whitespace> {};
+		struct loop_end : pegtl::opt<ws_or_eof> {};
 		struct loop_data_name : data_name {};
-		struct loop_data_value : wspace_data_value {};
-		struct loop_begin : LOOP {};
-		struct data_loop : pegtl::if_must<
-			                          loop_begin,
-			                          pegtl::plus<wspace, loop_data_name>,
-			                          pegtl::plus<loop_data_value>
-		                             > {};
+		struct loop_value : value {};
+		struct loop_data_names : pegtl::plus<pegtl::seq<loop_data_name, whitespace, pegtl::discard>> {};
+		struct loop_data_values : pegtl::sor<pegtl::plus<pegtl::seq<loop_value, ws_or_eof, pegtl::discard>>, pegtl::at<pegtl::sor<reserved, pegtl::eof>>> {};
+		struct loop : pegtl::if_must<
+		                             loop_begin,
+		                             loop_data_names,
+		                             loop_data_values,
+		                             loop_end
+		                            > {};
 
         //Data
-        struct data : pegtl::sor<
-			                     pegtl::if_must<data_name, wspace_data_value>, 
-			                     data_loop
-		                        > {};
+		struct data_value : value {};
+		struct item : pegtl::if_must<data_name, whitespace, pegtl::if_then_else<data_value, ws_or_eof, TAO_PEGTL_RAISE_MESSAGE("Malformed or missing value.")>, pegtl::discard> {};
+		struct data : pegtl::sor<item, loop> {};
 
         //Container code
         struct container_code : pegtl::plus<non_blank_char> {};
 
         //saveframe
-        struct frame_content : pegtl::seq<wspace, data> {};
+        struct frame_content : pegtl::seq<data> {};
         struct save_heading : pegtl::if_must<SAVE, container_code> {};
-        struct save_frame : pegtl::if_must<save_heading, pegtl::star<frame_content>, wspace, SAVE> {};
+        struct save_frame : pegtl::if_must<save_heading, whitespace, pegtl::star<frame_content>, SAVE, whitespace> {};
 
         //data block
-		struct block_content : pegtl::seq<wspace, pegtl::sor<data, save_frame>> {};
+		struct block_content : pegtl::sor<data, save_frame> {};
 		struct data_heading : pegtl::if_must<DATA, container_code> {};
-		struct data_block : pegtl::if_must<data_heading, pegtl::star<block_content>> {};
+		struct data_block : pegtl::if_must<data_heading, whitespace, pegtl::star<block_content>> {};
 
         //CIF2 file
         struct magic_code : TAO_PEGTL_STRING("#\\#CIF_2.0") {};
-        struct file_heading : pegtl::seq<pegtl::opt<pegtl8::bom>, magic_code, pegtl::star<inline_wspace>> {};
-        struct CIF2_file : pegtl::seq<file_heading, pegtl::opt<line_term, 
-			                                                   pegtl::opt<wspace_any, 
+        struct file_heading : pegtl::seq<pegtl::opt<pegtl8::bom>, magic_code, pegtl::star<ws>> {};
+        struct CIF2_file : pegtl::seq<file_heading, pegtl::opt<pegtl::eol, 
+			                                                   pegtl::opt<pegtl::opt<whitespace>,
 			                                                              data_block, 
-			                                                              pegtl::star<wspace, data_block>
+			                                                              pegtl::star<whitespace, data_block>
 															             >, 
-			                                                   pegtl::opt<wspace>, 
+			                                                   pegtl::star<whitespace>,
 			                                                   pegtl::opt<comment>
 		                                                      >,
-		                              pegtl::eolf
+		                              pegtl::eof
 		                             > {};
-		//, TAO_PEGTL_RAISE_MESSAGE("Got to here.")
-
-        ////Tags and values
-        //struct tag : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<nonblankchar>, TAO_PEGTL_RAISE_MESSAGE("Malformed tag name.")>> {};
-        //struct value : pegtl::sor<numeric, textfield, charstring> {}; //need to check for textfield first, as a charstring can start with a semicolon
-        //struct itemtag : tag {};
-        //struct itemvalue : value {};
-        //struct looptag : tag {};
-        //struct loopvalue : value {};
-
-        ////CIF Structure
-        ////loop
-        //struct loopend : pegtl::opt<STOP, ws_or_eof> {};
-        //struct looptags : pegtl::plus<pegtl::seq<looptag, whitespace, pegtl::discard>> {};
-        //struct loopvalues : pegtl::sor<pegtl::plus<pegtl::seq<loopvalue, ws_or_eof, pegtl::discard>>, /* handle incorrect CIF with empty loop -->*/ pegtl::at<pegtl::sor<reserved, pegtl::eof>>> {};
-        //struct loopstart : pegtl::seq<LOOP, whitespace> {};
-        //struct loop : pegtl::if_must<loopstart, looptags, loopvalues, loopend> {};
-
     } //end namespace rules
 
+
+	/*TODO: things to buffer
+	container_code
+	text_content
+	apostrophe3_content
+	quote3_content
+	apostrophe1_content
+	quote1_content
+	unquoted_string
+	*/
 
     ////to keep track of whether the quote string has been sent to file
     //struct Status
@@ -363,187 +311,99 @@ namespace row::cif
     template<typename Rule>
     struct Action_inner : pegtl::nothing<Rule> {};
 
-	template<> struct Action<rules::file_heading>
+	template<> struct Action<rules::text_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "file_heading: |" << in.string() << "|\n";
+			std::cout << "text_content: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::magic_code>
+	template<> struct Action<rules::text_field>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "magic_code: |" << in.string() << "|\n";
+			std::cout << "text_field: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::data_block>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "data_block: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::data_heading>
+	template<> struct Action<rules::apostrophe3_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "data_heading: |" << in.string() << "|\n";
+			std::cout << "apostrophe3_content: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::block_content>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "block_content: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	//template<> struct Action<rules::save_frame>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "save_frame: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::save_heading>
+	template<> struct Action<rules::apostrophe3>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "save_heading: |" << in.string() << "|\n";
+			std::cout << "apostrophe3: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::frame_content>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "frame_content: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	//template<> struct Action<rules::container_code>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "container_code: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	//template<> struct Action<rules::data>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "data: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::loop_begin>
+	template<> struct Action<rules::quote3_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "A LOOP HAS BEGUN!\n";
+			std::cout << "quote3_content: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::loop_data_name>
+	template<> struct Action<rules::quote3>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "loop_data_name: |" << in.string() << "|\n";
+			std::cout << "quote3: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::loop_data_value>
+	template<> struct Action<rules::apostrophe1_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "loop_data_value: |" << in.string() << "|\n";
+			std::cout << "apostrophe1_content: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::data_loop>
+	template<> struct Action<rules::apostrophe1>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "data_loop: |" << in.string() << "|\n";
+			std::cout << "apostrophe1: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::data_name>
+	template<> struct Action<rules::quote1_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "data_name: |" << in.string() << "|\n";
+			std::cout << "quote1_content: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::lst_begin>
+	template<> struct Action<rules::quote1>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "A LIST HAS BEGUN!\n";
+			std::cout << "quote1: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::lst>
+	template<> struct Action<rules::unquoted_string>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "lst: |" << in.string() << "|\n";
+			std::cout << "unquoted_string: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::lst_end>
+	template<> struct Action<rules::value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "A LIST HAS ENDED!\n";
-		}
-	};
-
-	template<> struct Action<rules::lst_value>
-	{
-		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "lst_value: |" << in.string() << "|\n";
-		}
-	};
-
-	template<> struct Action<rules::table_begin>
-	{
-		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "A TABLE HAS BEGUN!\n";
-		}
-	};
-
-	template<> struct Action<rules::table>
-	{
-		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "table: |" << in.string() << "|\n";
-		}
-	};
-
-	template<> struct Action<rules::table_end>
-	{
-		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "A TABLE HAS ENDED!\n";
-		}
-	};
-
-	template<> struct Action<rules::table_entry>
-	{
-		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "table_entry: |" << in.string() << "|\n";
+			std::cout << "value: |" << in.string() << "|\n";
 		}
 	};
 
@@ -563,234 +423,213 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::wspace_data_value>
+	template<> struct Action<rules::table_entry>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "wspace_data_value: |" << in.string() << "|\n";
+			std::cout << "table_entry: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::nospace_value>
+	template<> struct Action<rules::table_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "nospace_value: |" << in.string() << "|\n";
+			std::cout << "table_begin: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::wsdelim_string_sol>
+	template<> struct Action<rules::table>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "wsdelim_string_sol: |" << in.string() << "|\n";
+			std::cout << "table: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::wsdelim_string>
+	template<> struct Action<rules::lst_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "wsdelim_string: |" << in.string() << "|\n";
+			std::cout << "lst_begin: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::single_quoted_string>
+	template<> struct Action<rules::lst_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "single_quoted_string: |" << in.string() << "|\n";
+			std::cout << "lst_value: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::quote1>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "quote1: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::quote1_content>
+	template<> struct Action<rules::lst>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "quote1_content: |" << in.string() << "|\n";
+			std::cout << "lst: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::quote1_delim>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "quote1_delim: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::apostrophe1>
+	template<> struct Action<rules::lst_values>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe1: |" << in.string() << "|\n";
+			std::cout << "lst_values: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::apostrophe1_content>
+	template<> struct Action<rules::data_name>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe1_content: |" << in.string() << "|\n";
+			std::cout << "data_name: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::apostrophe1_delim>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "apostrophe1_delim: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::triple_quoted_string>
+	template<> struct Action<rules::loop_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "triple_quoted_string: |" << in.string() << "|\n";
+			std::cout << "loop_begin: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::quote3>
+	template<> struct Action<rules::loop_data_name>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "quote3: |" << in.string() << "|\n";
+			std::cout << "loop_data_name: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::quote3_content>
+	template<> struct Action<rules::loop_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "quote3_content: |" << in.string() << "|\n";
+			std::cout << "loop_value: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::quote3_delim>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "quote3_delim: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::apostrophe3>
+	template<> struct Action<rules::loop_data_names>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe3: |" << in.string() << "|\n";
+			std::cout << "loop_data_names: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::apostrophe3_content>
+	template<> struct Action<rules::loop_data_values>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe3_content: |" << in.string() << "|\n";
+			std::cout << "loop_data_values: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::apostrophe3_delim>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "apostrophe3_delim: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	template<> struct Action<rules::text_field>
+	template<> struct Action<rules::data_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "text_field: |" << in.string() << "|\n";
+			std::cout << "data_value: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct Action<rules::text_content>
+	template<> struct Action<rules::item>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "text_content: |" << in.string() << "|\n";
+			std::cout << "item: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::text_delim>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "text_delim: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::data>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "data: |" << in.string() << "|\n";
+		}
+	};
 
+	template<> struct Action<rules::container_code>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "container_code: |" << in.string() << "|\n";
+		}
+	};
 
+	template<> struct Action<rules::frame_content>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "frame_content: |" << in.string() << "|\n";
+		}
+	};
 
+	template<> struct Action<rules::save_heading>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "save_heading: |" << in.string() << "|\n";
+		}
+	};
 
+	template<> struct Action<rules::save_frame>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "save_frame: |" << in.string() << "|\n";
+		}
+	};
 
+	template<> struct Action<rules::block_content>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "block_content: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::wspace>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "wspace: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::data_heading>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "data_heading: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::wspace_lines>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "wspace_lines: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::data_block>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "data_block: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::wspace_any>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "wspace_any: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::magic_code>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "magic_code: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::wspace_to_eol>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "wspace_to_eol: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::file_heading>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "file_heading: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::comment>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "comment: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	//template<> struct Action<rules::inline_wspace>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "inline_wspace: |" << in.string() << "|\n";
-	//	}
-	//};
-
-	//template<> struct Action<rules::line_term>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "line_term: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct Action<rules::CIF2_file>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "CIF2_file: |" << in.string() << "|\n";
+		}
+	};
 
 
     template<typename Input>
@@ -832,7 +671,7 @@ namespace row::cif
     //read a string into a Cif. Will throw std::runtime_error if it encounters problems
     inline /*Cif*/ void read_string(const std::string& cifstring, bool printErr = true, const std::string& source = "string") noexcept(false)
     {
-        pegtl::string_input<pegtl::tracking_mode::eager, pegtl::eol::cr_crlf_lf> in(cifstring, source);
+        pegtl::string_input<pegtl::tracking_mode::eager, pegtl::eol::lf_crlf> in(cifstring, source);
         read_input(in, printErr);
     }
 
