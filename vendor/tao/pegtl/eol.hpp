@@ -9,12 +9,12 @@
 
 #include "internal/eol.hpp"
 
-#include "internal/cr_crlf_lf_eol.hpp"
 #include "internal/cr_crlf_eol.hpp"
 #include "internal/cr_eol.hpp"
 #include "internal/crlf_eol.hpp"
 #include "internal/lf_crlf_eol.hpp"
 #include "internal/lf_eol.hpp"
+#include "internal/cr_crlf_lf_eol.hpp"
 
 namespace TAO_PEGTL_NAMESPACE
 {

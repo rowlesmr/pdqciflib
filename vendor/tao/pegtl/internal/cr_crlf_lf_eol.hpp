@@ -13,33 +13,34 @@ namespace TAO_PEGTL_NAMESPACE::internal
 {
    struct cr_crlf_lf_eol
    {
-      static constexpr int ch = '\r';
+      static constexpr int ch = '\n';
 
       template< typename ParseInput >
       [[nodiscard]] static bool_and_size eol_match( ParseInput& in ) noexcept( noexcept( in.size( 2 ) ) )
       {
-         bool_and_size p = { false, in.size( 2 ) };
-         if( p.size > 0 ) {
-            const auto a = in.peek_char();
-            if( a == '\n' ) {
-               in.bump_to_next_line();
-               p.size = 1;
-               p.data = true;
-            }
-            else if( a == '\r' ) {
-               if( ( p.size > 1 ) && ( in.peek_char( 1 ) == '\n' ) ) {
-                  in.bump_to_next_line( 2 );
-                  p.size = 2;
-                  p.data = true;
-               }
-               else {
-                  in.bump_to_next_line();
-                  p.size = 1;
-                  p.data = true;
-               }
-            }
-
-            return p;
+		  bool_and_size p = { false, in.size(2) };
+		  if (p.size > 0)
+		  {
+			  const auto a = in.peek_char();
+			  if (a == '\n') {
+				  in.bump_to_next_line();
+				  p.size = 1;
+				  p.data = true;
+			  }
+			  else if (a == '\r') {
+				  if ( (p.size > 1) && (in.peek_char(1) == '\n') ) {
+					  in.bump_to_next_line(2);
+					  p.size = 2;
+					  p.data = true;
+				  }
+				  else {
+					  in.bump_to_next_line();
+					  p.size = 1;
+					  p.data = true;
+				  }
+			  }
+		  }
+			  return p;
       }
    };
 

@@ -832,7 +832,7 @@ namespace row::cif
     //read a string into a Cif. Will throw std::runtime_error if it encounters problems
     inline /*Cif*/ void read_string(const std::string& cifstring, bool printErr = true, const std::string& source = "string") noexcept(false)
     {
-        pegtl::string_input in(cifstring, source);
+        pegtl::string_input<pegtl::tracking_mode::eager, pegtl::eol::cr_crlf_lf> in(cifstring, source);
         read_input(in, printErr);
     }
 
