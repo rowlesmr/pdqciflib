@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -7,11 +7,12 @@
 
 #include <cstddef>
 
+#include "config.hpp"
 #include "parse_error.hpp"
 
 #include "internal/rules.hpp"
 
-namespace tao::pegtl
+namespace TAO_PEGTL_NAMESPACE
 {
    // clang-format off
    template< template< typename... > class Action, typename... Rules > struct action : internal::action< Action, Rules... > {};
@@ -40,6 +41,7 @@ namespace tao::pegtl
    template< typename... Rules > struct opt : internal::opt< Rules... > {};
    template< typename Rule, typename Pad1, typename Pad2 = Pad1 > struct pad : internal::pad< Rule, Pad1, Pad2 > {};
    template< typename Rule, typename Pad > struct pad_opt : internal::pad_opt< Rule, Pad > {};
+   template< typename Rule, typename... Rules > struct partial : internal::partial< Rule, Rules... > {};
    template< typename Rule, typename... Rules > struct plus : internal::plus< Rule, Rules... > {};
    template< typename Head, typename... Rules > struct rematch : internal::rematch< Head, Rules... > {};
    template< unsigned Num, typename... Rules > struct rep : internal::rep< Num, Rules... > {};
@@ -51,7 +53,10 @@ namespace tao::pegtl
    template< typename... Rules > struct seq : internal::seq< Rules... > {};
    template< typename... Rules > struct sor : internal::sor< Rules... > {};
    template< typename Rule, typename... Rules > struct star : internal::star< Rule, Rules... > {};
+   template< typename Rule, typename... Rules > struct star_partial : internal::star_partial< Rule, Rules... > {};
+   template< typename Rule, typename... Rules > struct star_strict : internal::star_strict< Rule, Rules... > {};
    template< typename State, typename... Rules > struct state : internal::state< State, Rules... > {};
+   template< typename Rule, typename... Rules > struct strict : internal::strict< Rule, Rules... > {};
    struct success : internal::success {};
    template< typename Cond, typename... Rules > struct until : internal::until< Cond, Rules... > {};
 
@@ -72,6 +77,6 @@ namespace tao::pegtl
 #endif
    // clang-format on
 
-}  // namespace tao::pegtl
+}  // namespace TAO_PEGTL_NAMESPACE
 
 #endif

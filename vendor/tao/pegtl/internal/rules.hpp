@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -36,6 +36,7 @@
 #include "opt.hpp"
 #include "pad.hpp"
 #include "pad_opt.hpp"
+#include "partial.hpp"
 #include "plus.hpp"
 #include "range.hpp"
 #include "ranges.hpp"
@@ -48,7 +49,10 @@
 #include "seq.hpp"
 #include "sor.hpp"
 #include "star.hpp"
+#include "star_partial.hpp"
+#include "star_strict.hpp"
 #include "state.hpp"
+#include "strict.hpp"
 #include "string.hpp"
 #include "success.hpp"
 #include "until.hpp"

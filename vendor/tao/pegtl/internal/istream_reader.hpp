@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2016-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -14,7 +14,9 @@
 #include <exception>
 #endif
 
-namespace tao::pegtl::internal
+#include "../config.hpp"
+
+namespace TAO_PEGTL_NAMESPACE::internal
 {
    struct istream_reader
    {
@@ -24,10 +26,10 @@ namespace tao::pegtl::internal
 
       [[nodiscard]] std::size_t operator()( char* buffer, const std::size_t length )
       {
-         m_istream.read( buffer, std::streamsize( length ) );
+         m_istream.read( buffer, static_cast< std::streamsize >( length ) );
 
          if( const auto r = m_istream.gcount() ) {
-            return std::size_t( r );
+            return static_cast< std::size_t >( r );
          }
          if( m_istream.eof() ) {
             return 0;
@@ -44,6 +46,6 @@ namespace tao::pegtl::internal
       std::istream& m_istream;
    };
 
-}  // namespace tao::pegtl::internal
+}  // namespace TAO_PEGTL_NAMESPACE::internal
 
 #endif

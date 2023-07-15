@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2020-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "../config.hpp"
 #include "../demangle.hpp"
 
 #include "analyze_traits.hpp"
@@ -22,7 +23,7 @@
 #include "internal/set_stack_guard.hpp"
 #include "internal/vector_stack_guard.hpp"
 
-namespace tao::pegtl
+namespace TAO_PEGTL_NAMESPACE
 {
    namespace internal
    {
@@ -67,8 +68,7 @@ namespace tao::pegtl
 
       protected:
          explicit analyze_cycles_impl( const int verbose ) noexcept
-            : m_verbose( verbose ),
-              m_problems( 0 )
+            : m_verbose( verbose )
          {}
 
          [[nodiscard]] const std::pair< const std::string_view, analyze_entry >& find( const std::string_view name ) const noexcept
@@ -139,7 +139,7 @@ namespace tao::pegtl
 
          const int m_verbose;
 
-         std::size_t m_problems;
+         std::size_t m_problems = 0;
 
          std::set< std::string_view > m_stack;
          std::vector< std::string_view > m_trace;
@@ -184,6 +184,6 @@ namespace tao::pegtl
       return internal::analyze_cycles< Grammar >( verbose ).problems();
    }
 
-}  // namespace tao::pegtl
+}  // namespace TAO_PEGTL_NAMESPACE
 
 #endif

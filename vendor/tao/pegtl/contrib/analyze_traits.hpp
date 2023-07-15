@@ -1,4 +1,4 @@
-// Copyright (c) 2020-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2020-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -8,12 +8,13 @@
 #include <type_traits>
 
 #include "../ascii.hpp"
+#include "../config.hpp"
 #include "../rules.hpp"
 #include "../type_list.hpp"
 
 #include "forward.hpp"
 
-namespace tao::pegtl
+namespace TAO_PEGTL_NAMESPACE
 {
    namespace internal
    {
@@ -165,9 +166,14 @@ namespace tao::pegtl
       : analyze_any_traits<>
    {};
 
-   template< typename Name, typename Rule, typename... Rules >
-   struct analyze_traits< Name, internal::opt< Rule, Rules... > >
-      : analyze_opt_traits< Rule, Rules... >
+   template< typename Name, typename... Rules >
+   struct analyze_traits< Name, internal::opt< Rules... > >
+      : analyze_opt_traits< Rules... >
+   {};
+
+   template< typename Name, typename... Rules >
+   struct analyze_traits< Name, internal::partial< Rules... > >
+      : analyze_opt_traits< Rules... >
    {};
 
    template< typename Name, typename... Rules >
@@ -225,6 +231,11 @@ namespace tao::pegtl
       : analyze_traits< Name, typename opt< Rules..., Name >::rule_t >
    {};
 
+   template< typename Name, typename... Rules >
+   struct analyze_traits< Name, internal::star_partial< Rules... > >
+      : analyze_traits< Name, typename opt< Rules..., Name >::rule_t >
+   {};
+
    template< typename Name, typename State, typename... Rules >
    struct analyze_traits< Name, internal::state< State, Rules... > >
       : analyze_traits< Name, typename seq< Rules... >::rule_t >
@@ -277,6 +288,6 @@ namespace tao::pegtl
    {};
 #endif
 
-}  // namespace tao::pegtl
+}  // namespace TAO_PEGTL_NAMESPACE
 
 #endif

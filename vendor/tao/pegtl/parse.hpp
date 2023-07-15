@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -8,13 +8,14 @@
 #include <type_traits>
 
 #include "apply_mode.hpp"
+#include "config.hpp"
 #include "normal.hpp"
 #include "nothing.hpp"
 #include "parse_error.hpp"
 #include "position.hpp"
 #include "rewind_mode.hpp"
 
-namespace tao::pegtl
+namespace TAO_PEGTL_NAMESPACE
 {
    namespace internal
    {
@@ -35,7 +36,7 @@ namespace tao::pegtl
              template< typename... > class Action = nothing,
              template< typename... > class Control = normal,
              apply_mode A = apply_mode::action,
-             rewind_mode M = rewind_mode::dontcare,
+             rewind_mode M = rewind_mode::optional,
              typename ParseInput,
              typename... States >
    auto parse( ParseInput&& in, States&&... st )
@@ -47,7 +48,7 @@ namespace tao::pegtl
              template< typename... > class Action = nothing,
              template< typename... > class Control = normal,
              apply_mode A = apply_mode::action,
-             rewind_mode M = rewind_mode::dontcare,
+             rewind_mode M = rewind_mode::optional,
              typename Outer,
              typename ParseInput,
              typename... States >
@@ -67,6 +68,6 @@ namespace tao::pegtl
 #endif
    }
 
-}  // namespace tao::pegtl
+}  // namespace TAO_PEGTL_NAMESPACE
 
 #endif

@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2017-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -19,6 +19,7 @@
 #include "shuffle_states.hpp"
 
 #include "../apply_mode.hpp"
+#include "../config.hpp"
 #include "../demangle.hpp"
 #include "../memory_input.hpp"
 #include "../normal.hpp"
@@ -30,7 +31,7 @@
 #include "../internal/frobnicator.hpp"
 #include "../internal/has_unwind.hpp"
 
-namespace tao::pegtl::parse_tree
+namespace TAO_PEGTL_NAMESPACE::parse_tree
 {
    template< typename T, typename Source = std::string_view >
    struct basic_node
@@ -42,8 +43,8 @@ namespace tao::pegtl::parse_tree
       std::string_view type;
       Source source;
 
-      tao::pegtl::internal::frobnicator m_begin;
-      tao::pegtl::internal::frobnicator m_end;
+      TAO_PEGTL_NAMESPACE::internal::frobnicator m_begin;
+      TAO_PEGTL_NAMESPACE::internal::frobnicator m_end;
 
       // each node will be default constructed
       basic_node() = default;
@@ -95,13 +96,13 @@ namespace tao::pegtl::parse_tree
       [[nodiscard]] std::string_view string_view() const noexcept
       {
          assert( has_content() );
-         return std::string_view( m_begin.data, m_end.data - m_begin.data );
+         return { m_begin.data, static_cast< std::size_t >( m_end.data - m_begin.data ) };
       }
 
       [[nodiscard]] std::string string() const
       {
          assert( has_content() );
-         return std::string( m_begin.data, m_end.data );
+         return { m_begin.data, m_end.data };
       }
 
       template< tracking_mode P = tracking_mode::eager, typename Eol = eol::lf_crlf >
@@ -114,7 +115,7 @@ namespace tao::pegtl::parse_tree
       template< typename... States >
       void remove_content( States&&... /*unused*/ ) noexcept
       {
-         m_end = tao::pegtl::internal::frobnicator();
+         m_end = TAO_PEGTL_NAMESPACE::internal::frobnicator();
       }
 
       // all non-root nodes are initialized by calling this method
@@ -123,24 +124,19 @@ namespace tao::pegtl::parse_tree
       {
          set_type< Rule >();
          source = in.source();
-         m_begin = tao::pegtl::internal::frobnicator( in.frobnicator() );
+         m_begin = TAO_PEGTL_NAMESPACE::internal::frobnicator( in.frobnicator() );
       }
 
       // if parsing of the rule succeeded, this method is called
       template< typename Rule, typename ParseInput, typename... States >
       void success( const ParseInput& in, States&&... /*unused*/ ) noexcept
       {
-         m_end = tao::pegtl::internal::frobnicator( in.frobnicator() );
+         m_end = TAO_PEGTL_NAMESPACE::internal::frobnicator( in.frobnicator() );
       }
 
       // if parsing of the rule failed, this method is called
       template< typename Rule, typename ParseInput, typename... States >
       void failure( const ParseInput& /*unused*/, States&&... /*unused*/ ) noexcept
-      {}
-
-      // if parsing of the rule failed with an exception, this method is called
-      template< typename Rule, typename ParseInput, typename... States >
-      void unwind( const ParseInput& /*unused*/, States&&... /*unused*/ ) noexcept
       {}
 
       // if parsing succeeded and the (optional) transform call
@@ -208,7 +204,7 @@ namespace tao::pegtl::parse_tree
       }
 
       template< typename Rule, template< typename... > class Selector >
-      inline constexpr bool is_selected_node = ( tao::pegtl::internal::enable_control< Rule > && Selector< Rule >::value );
+      inline constexpr bool is_selected_node = ( TAO_PEGTL_NAMESPACE::internal::enable_control< Rule > && Selector< Rule >::value );
 
       template< unsigned Level, typename Subs, template< typename... > class Selector >
       inline constexpr bool is_leaf{};
@@ -231,6 +227,19 @@ namespace tao::pegtl::parse_tree
          template< typename Rule >
          using type = rotate_states_right< state_handler< Rule, is_selected_node< Rule, Selector >, is_leaf< 8, typename Rule::subs_t, Selector > > >;
       };
+
+      template< typename, typename, typename... >
+      inline constexpr bool node_has_unwind = false;
+
+      template< typename Node, typename Rule, typename... States >
+      inline constexpr bool node_has_unwind< Node,
+                                             Rule,
+                                             decltype( std::declval< Node >().template unwind< Rule >( std::declval< States >()... ) ),
+                                             States... >
+         = true;
+
+      template< typename Control, typename... States >
+      inline constexpr bool control_has_unwind = TAO_PEGTL_NAMESPACE::internal::has_unwind< Control, void, States... >;
 
       template< typename Node, template< typename... > class Selector, template< typename... > class Control >
       template< typename Rule >
@@ -309,13 +318,19 @@ namespace tao::pegtl::parse_tree
          }
 
          template< typename ParseInput, typename... States >
-         static void unwind( const ParseInput& in, state< Node >& state, States&&... st )
+         static void unwind( [[maybe_unused]] const ParseInput& in, [[maybe_unused]] state< Node >& state, States&&... st )
          {
-            state.back()->template unwind< Rule >( in, st... );
+            if constexpr( node_has_unwind< Node, Rule, void, const ParseInput&, States... > ) {
+               state.back()->template unwind< Rule >( in, st... );
+            }
             state.pop_back();
-            if constexpr( tao::pegtl::internal::has_unwind< Control< Rule >, void, const ParseInput&, States... > ) {
+            if constexpr( control_has_unwind< Control< Rule >, const ParseInput&, States... > ) {
                Control< Rule >::unwind( in, st... );
             }
+#if defined( _MSC_VER )
+            ( (void)st,
+              ... );
+#endif
          }
       };
 
@@ -420,7 +435,7 @@ namespace tao::pegtl::parse_tree
    [[nodiscard]] std::unique_ptr< Node > parse( ParseInput&& in, States&&... st )
    {
       internal::state< Node > state;
-      if( !tao::pegtl::parse< Rule, Action, internal::make_control< Node, Selector, Control >::template type >( in, st..., state ) ) {
+      if( !TAO_PEGTL_NAMESPACE::parse< Rule, Action, internal::make_control< Node, Selector, Control >::template type >( in, st..., state ) ) {
          return nullptr;
       }
       assert( state.stack.size() == 1 );
@@ -438,6 +453,6 @@ namespace tao::pegtl::parse_tree
       return parse< Rule, node, Selector, Action, Control >( in, st... );
    }
 
-}  // namespace tao::pegtl::parse_tree
+}  // namespace TAO_PEGTL_NAMESPACE::parse_tree
 
 #endif

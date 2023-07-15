@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -10,21 +10,22 @@
 #include <string>
 
 #include "../ascii.hpp"
+#include "../config.hpp"
 #include "../parse_error.hpp"
 
-namespace tao::pegtl::unescape
+namespace TAO_PEGTL_NAMESPACE::unescape
 {
    // Utility functions for the unescape actions.
 
    [[nodiscard]] inline bool utf8_append_utf32( std::string& string, const unsigned utf32 )
    {
       if( utf32 <= 0x7f ) {
-         string += char( utf32 & 0xff );
+         string += static_cast< char >( utf32 & 0xff );
          return true;
       }
       if( utf32 <= 0x7ff ) {
-         char tmp[] = { char( ( ( utf32 & 0x7c0 ) >> 6 ) | 0xc0 ),
-                        char( ( ( utf32 & 0x03f ) ) | 0x80 ) };
+         char tmp[] = { static_cast< char >( ( ( utf32 & 0x7c0 ) >> 6 ) | 0xc0 ),
+                        static_cast< char >( ( ( utf32 & 0x03f ) ) | 0x80 ) };
          string.append( tmp, sizeof( tmp ) );
          return true;
       }
@@ -33,24 +34,24 @@ namespace tao::pegtl::unescape
             // nope, this is a UTF-16 surrogate
             return false;
          }
-         char tmp[] = { char( ( ( utf32 & 0xf000 ) >> 12 ) | 0xe0 ),
-                        char( ( ( utf32 & 0x0fc0 ) >> 6 ) | 0x80 ),
-                        char( ( ( utf32 & 0x003f ) ) | 0x80 ) };
+         char tmp[] = { static_cast< char >( ( ( utf32 & 0xf000 ) >> 12 ) | 0xe0 ),
+                        static_cast< char >( ( ( utf32 & 0x0fc0 ) >> 6 ) | 0x80 ),
+                        static_cast< char >( ( ( utf32 & 0x003f ) ) | 0x80 ) };
          string.append( tmp, sizeof( tmp ) );
          return true;
       }
       if( utf32 <= 0x10ffff ) {
-         char tmp[] = { char( ( ( utf32 & 0x1c0000 ) >> 18 ) | 0xf0 ),
-                        char( ( ( utf32 & 0x03f000 ) >> 12 ) | 0x80 ),
-                        char( ( ( utf32 & 0x000fc0 ) >> 6 ) | 0x80 ),
-                        char( ( ( utf32 & 0x00003f ) ) | 0x80 ) };
+         char tmp[] = { static_cast< char >( ( ( utf32 & 0x1c0000 ) >> 18 ) | 0xf0 ),
+                        static_cast< char >( ( ( utf32 & 0x03f000 ) >> 12 ) | 0x80 ),
+                        static_cast< char >( ( ( utf32 & 0x000fc0 ) >> 6 ) | 0x80 ),
+                        static_cast< char >( ( ( utf32 & 0x00003f ) ) | 0x80 ) };
          string.append( tmp, sizeof( tmp ) );
          return true;
       }
       return false;
    }
 
-   // This function MUST only be called for characters matching tao::pegtl::ascii::xdigit!
+   // This function MUST only be called for characters matching TAO_PEGTL_NAMESPACE::ascii::xdigit!
    template< typename I >
    [[nodiscard]] I unhex_char( const char c )
    {
@@ -107,7 +108,7 @@ namespace tao::pegtl::unescape
       }
    };
 
-   // This action MUST be called for a character matching T which MUST be tao::pegtl::one< ... >.
+   // This action MUST be called for a character matching T which MUST be TAO_PEGTL_NAMESPACE::one< ... >.
    template< typename T, char... Rs >
    struct unescape_c
    {
@@ -209,6 +210,6 @@ namespace tao::pegtl::unescape
       }
    };
 
-}  // namespace tao::pegtl::unescape
+}  // namespace TAO_PEGTL_NAMESPACE::unescape
 
 #endif

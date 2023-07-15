@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2019-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "apply_mode.hpp"
+#include "config.hpp"
 #include "nothing.hpp"
 #include "require_apply.hpp"
 #include "require_apply0.hpp"
@@ -19,13 +20,14 @@
 #include "internal/missing_apply.hpp"
 #include "internal/missing_apply0.hpp"
 #include "internal/rewind_guard.hpp"
+#include "internal/unwind_guard.hpp"
 
 #if defined( _MSC_VER )
 #pragma warning( push )
 #pragma warning( disable : 4702 )
 #endif
 
-namespace tao::pegtl
+namespace TAO_PEGTL_NAMESPACE
 {
    namespace internal
    {
@@ -72,13 +74,12 @@ namespace tao::pegtl
       {
 #if defined( __cpp_exceptions )
          if constexpr( has_unwind< Control< Rule >, void, const ParseInput&, States... > ) {
-            try {
-               return match_no_control< Rule, A, M, Action, Control >( in, st... );
-            }
-            catch( ... ) {
+            unwind_guard ug( [ & ] {
                Control< Rule >::unwind( static_cast< const ParseInput& >( in ), st... );
-               throw;
-            }
+            } );
+            const auto result = match_no_control< Rule, A, M, Action, Control >( in, st... );
+            ug.unwind.reset();
+            return result;
          }
          else {
             return match_no_control< Rule, A, M, Action, Control >( in, st... );
@@ -136,9 +137,9 @@ namespace tao::pegtl
 
          constexpr bool use_guard = has_apply || has_apply0_bool;
 
-         auto m = in.template auto_rewind< ( use_guard ? rewind_mode::required : rewind_mode::dontcare ) >();
+         auto m = in.template auto_rewind< ( use_guard ? rewind_mode::required : rewind_mode::optional ) >();
          Control< Rule >::start( static_cast< const ParseInput& >( in ), st... );
-         auto result = internal::match_control_unwind< Rule, A, ( use_guard ? rewind_mode::active : M ), Action, Control >( in, st... );
+         auto result = internal::match_control_unwind< Rule, A, ( use_guard ? rewind_mode::optional : M ), Action, Control >( in, st... );
          if( result ) {
             if constexpr( has_apply_void ) {
                Control< Rule >::template apply< Action >( m.frobnicator(), static_cast< const ParseInput& >( in ), st... );
@@ -164,7 +165,7 @@ namespace tao::pegtl
       }
    }
 
-}  // namespace tao::pegtl
+}  // namespace TAO_PEGTL_NAMESPACE
 
 #if defined( _MSC_VER )
 #pragma warning( pop )

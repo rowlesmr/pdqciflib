@@ -4,7 +4,15 @@
     <LocalDebuggerCommandArguments>C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\*.cif</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe with release|x64'">
+    <LocalDebuggerCommandArguments>C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\*.cif</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommandArguments>C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\*.cif</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe release|x64'">
     <LocalDebuggerCommandArguments>C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\*.cif</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -17,7 +17,9 @@
 #include "filesystem.hpp"
 #include "resize_uninitialized.hpp"
 
-namespace tao::pegtl::internal
+#include "../config.hpp"
+
+namespace TAO_PEGTL_NAMESPACE::internal
 {
    [[nodiscard]] inline std::FILE* read_file_open( const internal::filesystem::path& path )
    {
@@ -28,7 +30,7 @@ namespace tao::pegtl::internal
          return file;
       }
 #if defined( __cpp_exceptions )
-      internal::error_code ec( errno, internal::system_category() );
+      const internal::error_code ec( errno, internal::system_category() );
       throw internal::filesystem::filesystem_error( "_wfopen_s() failed", path, ec );
 #else
       std::perror( "_wfopen_s() failed" );
@@ -44,7 +46,7 @@ namespace tao::pegtl::internal
          return file;
       }
 #if defined( __cpp_exceptions )
-      internal::error_code ec( errno, internal::system_category() );
+      const internal::error_code ec( errno, internal::system_category() );
       throw internal::filesystem::filesystem_error( "std::fopen() failed", path, ec );
 #else
       std::perror( "std::fopen() failed" );
@@ -87,7 +89,7 @@ namespace tao::pegtl::internal
          if( std::fseek( m_file.get(), 0, SEEK_END ) != 0 ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "std::fseek() failed [SEEK_END]", m_path, ec );
 #else
             std::perror( "std::fseek() failed [SEEK_END]" );
@@ -100,7 +102,7 @@ namespace tao::pegtl::internal
          if( s < 0 ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "std::ftell() failed", m_path, ec );
 #else
             std::perror( "std::ftell() failed" );
@@ -112,7 +114,7 @@ namespace tao::pegtl::internal
          if( std::fseek( m_file.get(), 0, SEEK_SET ) != 0 ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "std::fseek() failed [SEEK_SET]", m_path, ec );
 #else
             std::perror( "std::fseek() failed [SEEK_SET]" );
@@ -120,7 +122,7 @@ namespace tao::pegtl::internal
 #endif
             // LCOV_EXCL_STOP
          }
-         return std::size_t( s );
+         return static_cast< std::size_t >( s );
       }
 
       [[nodiscard]] std::string read_string() const
@@ -143,7 +145,7 @@ namespace tao::pegtl::internal
          if( std::fread( buffer, length, 1, m_file.get() ) != 1 ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "std::fread() failed", m_path, ec );
 #else
             std::perror( "std::fread() failed" );
@@ -154,6 +156,6 @@ namespace tao::pegtl::internal
       }
    };
 
-}  // namespace tao::pegtl::internal
+}  // namespace TAO_PEGTL_NAMESPACE::internal
 
 #endif

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2014-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
@@ -20,7 +20,9 @@
 
 #include "filesystem.hpp"
 
-namespace tao::pegtl::internal
+#include "../config.hpp"
+
+namespace TAO_PEGTL_NAMESPACE::internal
 {
    struct mmap_file_open
    {
@@ -47,7 +49,7 @@ namespace tao::pegtl::internal
          if( ::fstat( m_fd, &st ) < 0 ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "fstat() failed", m_path, ec );
 #else
             std::perror( "fstat() failed" );
@@ -55,7 +57,7 @@ namespace tao::pegtl::internal
 #endif
             // LCOV_EXCL_STOP
          }
-         return std::size_t( st.st_size );
+         return static_cast< std::size_t >( st.st_size );
       }
 
       const internal::filesystem::path m_path;
@@ -75,7 +77,7 @@ namespace tao::pegtl::internal
             return fd;
          }
 #if defined( __cpp_exceptions )
-         internal::error_code ec( errno, internal::system_category() );
+         const internal::error_code ec( errno, internal::system_category() );
          throw internal::filesystem::filesystem_error( "open() failed", m_path, ec );
 #else
          std::perror( "open() failed" );
@@ -95,10 +97,10 @@ namespace tao::pegtl::internal
          : m_size( reader.size() ),
            m_data( static_cast< const char* >( ::mmap( nullptr, m_size, PROT_READ, MAP_PRIVATE, reader.m_fd, 0 ) ) )
       {
-         if( ( m_size != 0 ) && ( intptr_t( m_data ) == -1 ) ) {
+         if( ( m_size != 0 ) && ( reinterpret_cast< intptr_t >( m_data ) == -1 ) ) {
             // LCOV_EXCL_START
 #if defined( __cpp_exceptions )
-            internal::error_code ec( errno, internal::system_category() );
+            const internal::error_code ec( errno, internal::system_category() );
             throw internal::filesystem::filesystem_error( "mmap() failed", reader.m_path, ec );
 #else
             std::perror( "mmap() failed" );
@@ -155,6 +157,6 @@ namespace tao::pegtl::internal
 
    using mmap_file_impl = mmap_file_posix;
 
-}  // namespace tao::pegtl::internal
+}  // namespace TAO_PEGTL_NAMESPACE::internal
 
 #endif

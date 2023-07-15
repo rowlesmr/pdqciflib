@@ -1,11 +1,13 @@
-// Copyright (c) 2015-2022 Dr. Colin Hirsch and Daniel Frey
+// Copyright (c) 2015-2023 Dr. Colin Hirsch and Daniel Frey
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
 
 #ifndef TAO_PEGTL_CONTRIB_ALPHABET_HPP
 #define TAO_PEGTL_CONTRIB_ALPHABET_HPP
 
-namespace tao::pegtl::alphabet
+#include "../config.hpp"
+
+namespace TAO_PEGTL_NAMESPACE::alphabet
 {
    static const char a = 'a';
    static const char b = 'b';
@@ -42,7 +44,7 @@ namespace tao::pegtl::alphabet
    static const char F = 'F';  // NOLINT(readability-identifier-naming)
    static const char G = 'G';  // NOLINT(readability-identifier-naming)
    static const char H = 'H';  // NOLINT(readability-identifier-naming)
-   static const char I = 'I';  // NOLINT(readability-identifier-naming)
+   static const char I = 'I';  // NOLINT(readability-identifier-naming,misc-confusable-identifiers)
    static const char J = 'J';  // NOLINT(readability-identifier-naming)
    static const char K = 'K';  // NOLINT(readability-identifier-naming)
    static const char L = 'L';  // NOLINT(readability-identifier-naming)
@@ -61,6 +63,6 @@ namespace tao::pegtl::alphabet
    static const char Y = 'Y';  // NOLINT(readability-identifier-naming)
    static const char Z = 'Z';  // NOLINT(readability-identifier-naming)
 
-}  // namespace tao::pegtl::alphabet
+}  // namespace TAO_PEGTL_NAMESPACE::alphabet
 
 #endif
