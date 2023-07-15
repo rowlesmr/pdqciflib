@@ -25,20 +25,19 @@ int main() {
 
 	std::string str{ R"(#\#CIF_2.0   
 data_name # comment with space
-_tag1 
-;sctf
-;
-_tag2 
-anotherstring
-)" };
-	/*
-_tag1 value1
 
+save_framename
+_tag1 value
+save_
+
+_tag1 
+;value1
+;
 _tag2
-value2
+'val[ue2'
 
 _tag3
- ;value2
+ ;value3
 
 _tag3 'hello "there", how are you?'
 _tag4 "'hello' there world!"
@@ -51,11 +50,12 @@ what
 are you
 doping?'''
 
+#save_frame
 #_tag7
 #;this is 
 #a text block
 #;
-
+#save_
 _tag8 [ list item three ]
 _tag9 { "table": entry "table2":entry2 }
 
@@ -68,28 +68,28 @@ _tag11
 _tag12 [ list { "table": entry "table2":{ "table": entry "table2":entry2 } } [ list item three ] ]
 
 
-#comment for)" };*/
+#comment for)" };
 
 //#\#CIF_2.0   
 //	data_name
 //		_tag
 
-	std::cout << "Start trace\n";
-	tao::pegtl::string_input in(str, "string");
-	try
-	{
-		tao::pegtl::tracer< tao::pegtl::tracer_traits<true, true, true> > tr(in);
-		tr.parse< row::cif::rules::CIF2_file, tao::pegtl::nothing, tao::pegtl::normal>(in);
-	}
-	catch (const tao::pegtl::parse_error& e)
-	{
-		const auto p = e.positions().front();
-		std::cerr << e.what() << '\n'
-			<< in.line_at(p) << '\n'
-			<< std::setw(p.column) << '^' << std::endl;
-		return 1;
-	}
-	std::cout << "End trace\n";
+	//std::cout << "Start trace\n";
+	//tao::pegtl::string_input in(str, "string");
+	//try
+	//{
+	//	tao::pegtl::tracer< tao::pegtl::tracer_traits<true, true, true> > tr(in);
+	//	tr.parse< row::cif::rules::CIF2_file, tao::pegtl::nothing, tao::pegtl::normal>(in);
+	//}
+	//catch (const tao::pegtl::parse_error& e)
+	//{
+	//	const auto p = e.positions().front();
+	//	std::cerr << e.what() << '\n'
+	//		<< in.line_at(p) << '\n'
+	//		<< std::setw(p.column) << '^' << std::endl;
+	//	return 1;
+	//}
+	//std::cout << "End trace\n";
 
 	row::cif::read_string(str);
 
