@@ -2,6 +2,9 @@
 
 //#include <iostream>
 //#include <string>
+#include  <filesystem>
+
+
 
 #define _SILENCE_CXX20_CISO646_REMOVED_WARNING
 
@@ -27,7 +30,7 @@ int main() {
 data_name # comment with space
 
 save_framename
-_tag1 value
+_tagsf value
 save_
 
 _tag1 
@@ -74,24 +77,44 @@ _tag12 [ list { "table": entry "table2":{ "table": entry "table2":entry2 } } [ l
 //	data_name
 //		_tag
 
-	//std::cout << "Start trace\n";
 	//tao::pegtl::string_input in(str, "string");
-	//try
-	//{
-	//	tao::pegtl::tracer< tao::pegtl::tracer_traits<true, true, true> > tr(in);
-	//	tr.parse< row::cif::rules::CIF2_file, tao::pegtl::nothing, tao::pegtl::normal>(in);
-	//}
-	//catch (const tao::pegtl::parse_error& e)
-	//{
-	//	const auto p = e.positions().front();
-	//	std::cerr << e.what() << '\n'
-	//		<< in.line_at(p) << '\n'
-	//		<< std::setw(p.column) << '^' << std::endl;
-	//	return 1;
-	//}
-	//std::cout << "End trace\n";
 
-	row::cif::read_string(str);
+	const std::filesystem::path test_data_folder{ R"(C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\test_data)" };
+	for (auto const& filename : std::filesystem::directory_iterator{ test_data_folder })
+	{
+		if (!std::filesystem::is_regular_file(filename) || filename.path().extension() != ".cif")
+			continue;
+
+		std::cout << filename << '\n';
+		try
+		{
+			row::cif::read_file(filename.path().string());
+		}
+		catch(const std::runtime_error& e)
+		{
+			std::cerr << e.what() << '\n';
+		}
+
+		//std::cout << "Start trace\n";
+		//tao::pegtl::file_input<tao::pegtl::tracking_mode::eager, tao::pegtl::eol::lf_crlf> in(filename);
+		//try
+		//{
+		//	tao::pegtl::tracer< tao::pegtl::tracer_traits<true, true, true> > tr(in);
+		//	tr.parse< row::cif::rules::CIF2_file, tao::pegtl::nothing, tao::pegtl::normal>(in);
+		//}
+		//catch (const tao::pegtl::parse_error& e)
+		//{
+		//	const auto p = e.positions().front();
+		//	std::cerr << e.what() << '\n'
+		//		<< in.line_at(p) << '\n'
+		//		<< std::setw(p.column) << '^' << std::endl;
+		//	return 1;
+		//}
+		//std::cout << "End trace\n";
+	}
+	//row::cif::read_string(str);
+
+	//row::cif::read_file(R"(C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\test_data)");
 
 
 	//row::cif::Cif cif1 = row::cif::read_string(str);
