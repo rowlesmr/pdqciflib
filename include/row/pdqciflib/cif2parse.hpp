@@ -53,6 +53,7 @@ namespace row::cif
 
 
         //Whitespace, and comments
+		//struct line_term : pegtl::sor<pegtl::seq<pegtl::one<'\r'>, pegtl::opt<pegtl::one<'\n'>>>, pegtl::one<'\n'>> {};
 		struct comment : pegtl::if_must<pegtl::one<'#'>, pegtl::until<pegtl::eolf>> {};
 		struct ws : pegtl::blank {}; // pegtl::one<' ', '\t'>
 		struct wschar : pegtl::space {}; //pegtl::one<' ', '\n', '\r', '\t', '\v', '\f'>
@@ -66,8 +67,8 @@ namespace row::cif
 
         //text block
 		struct text_delim : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
-		struct end_text_delim : text_delim {}; // pegtl::seq<pegtl::star<ws>, line_term, text_delim> {};
-		struct text_content : pegtl::star<pegtl::not_at<end_text_delim>, pegtl::sor<allchars, pegtl::eol>> {};
+		struct end_text_delim : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
+		struct text_content : pegtl::star<pegtl::not_at<end_text_delim>, allchars> {};
 		struct text_field : pegtl::if_must<text_delim, text_content, end_text_delim> {};
 
         //triple-quote block
