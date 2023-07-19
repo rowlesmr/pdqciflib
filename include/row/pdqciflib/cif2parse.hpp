@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "tao/pegtl.hpp"
+#include "tao_dev/pegtl.hpp"
 
 #include "ciffile.hpp"
 #include "cifexcept.hpp"
@@ -53,17 +53,13 @@ namespace row::cif
 
 
         //Whitespace, and comments
-		//struct line_term : pegtl::sor<pegtl::seq<pegtl::one<'\r'>, pegtl::opt<pegtl::one<'\n'>>>, pegtl::one<'\n'>> {};
+		struct line_term : pegtl::sor<pegtl::seq<pegtl::one<'\r'>, pegtl::opt<pegtl::one<'\n'>>>, pegtl::one<'\n'>> {};
 		struct comment : pegtl::if_must<pegtl::one<'#'>, pegtl::until<pegtl::eolf>> {};
+		//struct comment : pegtl::if_must<pegtl::one<'#'>, pegtl::star<char_>> {};
 		struct ws : pegtl::blank {}; // pegtl::one<' ', '\t'>
-		struct wschar : pegtl::space {}; //pegtl::one<' ', '\n', '\r', '\t', '\v', '\f'>
+		struct wschar : pegtl::sor<ws, line_term> {}; // pegtl::space{}; //pegtl::one<' ', '\n', '\r', '\t', '\v', '\f'>
 		struct whitespace : pegtl::plus<pegtl::sor<wschar, comment>> {};
 		struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
-
-		//special data values
-		struct not_applicable : pegtl::one<'.'> {};
-		struct unknown : pegtl::one<'?'> {};
-		struct special : pegtl::sor<not_applicable, unknown> {};
 
         //text block
 		struct text_delim : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
@@ -74,7 +70,6 @@ namespace row::cif
         //triple-quote block
         struct apostrophe3_delim : TAO_PEGTL_STRING("'''") {};
 		struct apostrophe3_content : pegtl::star<pegtl::opt<pegtl::seq<pegtl::one<'\''>, pegtl::opt<pegtl::one<'\''>>>>, pegtl::plus<not_3apostrophe>> {};
-		//struct apostrophe3 : pegtl::seq<apostrophe3_delim, pegtl::until<apostrophe3_delim, apostrophe3_content>> {};
 		struct apostrophe3 : pegtl::if_must<apostrophe3_delim, apostrophe3_content, apostrophe3_delim> {};
 
 		struct quote3_delim : TAO_PEGTL_STRING("\"\"\"") {};
@@ -95,26 +90,20 @@ namespace row::cif
 		struct single_quoted_string : pegtl::sor<quote1, apostrophe1> {};
 
         //unquoted string
-        struct unquoted_string : pegtl::seq<
-			                               pegtl::not_at<
-			                                             pegtl::sor<
-			                                                        pegtl::seq<
-			                                                                   pegtl::sor<DATA, SAVE>, pegtl::star<non_blank_char>
-																	          >, 
-			                                                        LOOP, GLOBAL, STOP
-			                                                       >
-										                >, 
-			                               lead_char, 
-			                               pegtl::star<restrict_char>
-		                                  > {};
+        struct unquoted_string : pegtl::seq<pegtl::not_at<pegtl::sor<pegtl::seq<pegtl::sor<DATA, SAVE>, pegtl::star<non_blank_char>>, LOOP, GLOBAL, STOP>>, lead_char, pegtl::star<restrict_char>> {};
 
 		//other values
 		struct lst;
 		struct table;
 
+		//special data values
+		struct not_applicable : pegtl::one<'.'> {};
+		struct unknown : pegtl::one<'?'> {};
+		struct special : pegtl::sor<not_applicable, unknown> {};
+
 		struct value : pegtl::sor<special, text_field, unquoted_string, triple_quoted_string, single_quoted_string, lst, table> {};
 
-        //table
+        //Table
 		struct table_key : pegtl::sor<triple_quoted_string, single_quoted_string> {};
 		struct table_value : value {};
         struct table_entry : pegtl::if_must<table_key, pegtl::one<':'>, pegtl::opt<whitespace>, table_value> {};
@@ -127,18 +116,12 @@ namespace row::cif
 			                      table_end
 		                         >{};
 
-		//list
+		//List
 		struct lst_begin : pegtl::one<'['> {};
 		struct lst_end : pegtl::one<']'> {};
 		struct lst_value : value {};
 		struct lst_values : pegtl::opt<pegtl::opt<whitespace>, lst_value, pegtl::star<whitespace, lst_value>> {};
-		struct lst : pegtl::if_must<
-			                    lst_begin,
-			                    lst_values, 
-			                    pegtl::opt<whitespace>,
-			                    lst_end
-		                       > {};
-
+		struct lst : pegtl::if_must<lst_begin, lst_values, /*pegtl::opt<whitespace>,*/ lst_end> {};
 
         //Data name    
 		struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<non_blank_char>, TAO_PEGTL_RAISE_MESSAGE("Malformed data name.")>> {};
@@ -150,12 +133,7 @@ namespace row::cif
 		struct loop_value : value {};
 		struct loop_data_names : pegtl::plus<pegtl::seq<loop_data_name, whitespace, pegtl::discard>> {};
 		struct loop_data_values : pegtl::sor<pegtl::plus<pegtl::seq<loop_value, ws_or_eof, pegtl::discard>>, pegtl::at<pegtl::sor<reserved, pegtl::eof>>> {};
-		struct loop : pegtl::if_must<
-		                             loop_begin,
-		                             loop_data_names,
-		                             loop_data_values,
-		                             loop_end
-		                            > {};
+		struct loop : pegtl::if_must<loop_begin, loop_data_names, loop_data_values, loop_end> {};
 
         //Data
 		struct data_value : value {};
@@ -167,13 +145,15 @@ namespace row::cif
 
         //saveframe
 		struct save_frame;
-        struct frame_content : pegtl::seq<data> {};
-        struct save_heading : pegtl::if_must<SAVE, container_code> {};
+        struct frame_content : pegtl::sor<data, save_frame> {};
+        struct save_heading : pegtl::seq<SAVE, container_code> {};
         struct save_frame : pegtl::if_must<save_heading, whitespace, pegtl::star<frame_content>, SAVE, ws_or_eof> {};
 
         //data block
+		struct ec_data_heading : pegtl::seq<pegtl::plus<ws>, pegtl::plus<value, pegtl::star<ws>>> {};
+
 		struct block_content : pegtl::sor<data, save_frame> {};
-		struct data_heading : pegtl::if_must<DATA, container_code> {};
+		struct data_heading : pegtl::if_must<DATA, container_code, pegtl::opt<ec_data_heading>> {};
 		struct data_block : pegtl::if_must<data_heading, whitespace, pegtl::star<block_content>> {};
 
         //CIF2 file
@@ -187,6 +167,8 @@ namespace row::cif
 		                                                          >,
 		                                  pegtl::eof
 		                                 > {};
+
+
     } //end namespace rules
 
 
@@ -312,16 +294,26 @@ namespace row::cif
     //}
 
 
+
+
     //********************
     // Parsing Actions to populate the values in the ciffile
     //********************
     template<typename Rule>
-    struct Action : pegtl::nothing<Rule> {};
+    struct action : pegtl::nothing<Rule> {};
 
     template<typename Rule>
     struct Action_inner : pegtl::nothing<Rule> {};
 
-	template<> struct Action<rules::text_content>
+	template<> struct action<rules::ec_data_heading>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "ec_data_heading: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::text_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -329,7 +321,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::text_field>
+	template<> struct action<rules::text_field>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -337,7 +329,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::apostrophe3_content>
+	template<> struct action<rules::apostrophe3_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -345,7 +337,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::apostrophe3>
+	template<> struct action<rules::apostrophe3>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -353,7 +345,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::quote3_content>
+	template<> struct action<rules::quote3_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -361,7 +353,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::quote3>
+	template<> struct action<rules::quote3>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -369,7 +361,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::apostrophe1_content>
+	template<> struct action<rules::apostrophe1_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -377,7 +369,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::apostrophe1>
+	template<> struct action<rules::apostrophe1>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -385,7 +377,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::quote1_content>
+	template<> struct action<rules::quote1_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -393,7 +385,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::quote1>
+	template<> struct action<rules::quote1>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -401,7 +393,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::unquoted_string>
+	template<> struct action<rules::unquoted_string>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -409,7 +401,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::not_applicable>
+	template<> struct action<rules::not_applicable>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -417,7 +409,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::unknown>
+	template<> struct action<rules::unknown>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -425,7 +417,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::value>
+	template<> struct action<rules::value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -433,7 +425,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::table_key>
+	template<> struct action<rules::table_key>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -441,7 +433,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::table_value>
+	template<> struct action<rules::table_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -449,7 +441,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::table_entry>
+	template<> struct action<rules::table_entry>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -457,7 +449,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::table_begin>
+	template<> struct action<rules::table_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -465,7 +457,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::table>
+	template<> struct action<rules::table>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -473,7 +465,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::lst_begin>
+	template<> struct action<rules::lst_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -481,7 +473,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::lst_value>
+	template<> struct action<rules::lst_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -489,7 +481,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::lst>
+	template<> struct action<rules::lst>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -497,7 +489,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::lst_values>
+	template<> struct action<rules::lst_values>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -505,7 +497,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::data_name>
+	template<> struct action<rules::data_name>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -513,7 +505,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop_begin>
+	template<> struct action<rules::loop_begin>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -521,7 +513,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop_data_name>
+	template<> struct action<rules::loop_data_name>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -529,7 +521,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop_value>
+	template<> struct action<rules::loop_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -537,7 +529,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop_data_names>
+	template<> struct action<rules::loop_data_names>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -545,7 +537,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop_data_values>
+	template<> struct action<rules::loop_data_values>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -553,7 +545,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::loop>
+	template<> struct action<rules::loop>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -561,7 +553,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::data_value>
+	template<> struct action<rules::data_value>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -569,7 +561,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::item>
+	template<> struct action<rules::item>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -577,7 +569,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::data>
+	template<> struct action<rules::data>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -585,7 +577,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::container_code>
+	template<> struct action<rules::container_code>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -593,7 +585,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::frame_content>
+	template<> struct action<rules::frame_content>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -601,7 +593,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::save_heading>
+	template<> struct action<rules::save_heading>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -609,7 +601,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::save_frame>
+	template<> struct action<rules::save_frame>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -625,7 +617,7 @@ namespace row::cif
 	//	}
 	//};
 
-	template<> struct Action<rules::data_heading>
+	template<> struct action<rules::data_heading>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -633,7 +625,7 @@ namespace row::cif
 		}
 	};
 
-	template<> struct Action<rules::data_block>
+	template<> struct action<rules::data_block>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
@@ -657,13 +649,26 @@ namespace row::cif
 	//	}
 	//};
 
-	template<> struct Action<rules::CIF2_file>
+	template<> struct action<rules::CIF2_file>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
 			std::cout << "CIF2 file concluded.\n";
 		}
 	};
+
+	//template< typename > inline constexpr const char* error_message = nullptr;
+	//template<> inline constexpr auto error_message< rules::lst_end > = "Hello";
+
+
+	//struct error
+	//{
+	//	template< typename Rule > static constexpr bool raise_on_failure = false;
+	//	template< typename Rule > static constexpr auto message = error_message< Rule >;
+	//};
+
+	//template< typename Rule >
+	//using control = pegtl::must_if< error >::control< Rule >;
 
 
     template<typename Input>
@@ -673,7 +678,7 @@ namespace row::cif
         {
             //Status status{};
             //Buffer buffer{};
-			pegtl::parse<rules::CIF2_file, Action>(in); // , d, status, buffer);
+			pegtl::parse < rules::CIF2_file, action> (in); // , d, status, buffer);
         }
         catch (pegtl::parse_error& e)
         {
