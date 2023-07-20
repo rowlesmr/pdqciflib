@@ -27,8 +27,19 @@ int main() {
 
 
 	std::string str{ R"(#\#CIF_2.0   
-data_name      "hello there"#comment with space
-_tag hello)" };
+data_name
+
+_tag1 world
+
+_tag ''' the "first", thing 
+
+_tag2 hello
+
+_tag3 """ hi ehere"""
+
+_tag4 worls
+
+)" };
 
 
 

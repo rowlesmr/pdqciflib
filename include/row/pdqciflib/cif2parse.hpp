@@ -68,24 +68,26 @@ namespace row::cif
 		struct text_field : pegtl::if_must<text_delim, text_content, end_text_delim> {};
 
         //triple-quote block
-        struct apostrophe3_delim : TAO_PEGTL_STRING("'''") {};
+		struct ec_triple_close_quote : pegtl::success {};
+		struct apostrophe3_delim : TAO_PEGTL_STRING("'''") {};
 		struct apostrophe3_content : pegtl::star<pegtl::opt<pegtl::seq<pegtl::one<'\''>, pegtl::opt<pegtl::one<'\''>>>>, pegtl::plus<not_3apostrophe>> {};
-		struct apostrophe3 : pegtl::if_must<apostrophe3_delim, apostrophe3_content, apostrophe3_delim> {};
+		struct apostrophe3 : pegtl::if_must<apostrophe3_delim, apostrophe3_content, pegtl::sor<apostrophe3_delim, ec_triple_close_quote>> {};
 
 		struct quote3_delim : TAO_PEGTL_STRING("\"\"\"") {};
 		struct quote3_content : pegtl::star<pegtl::opt<pegtl::seq<pegtl::one<'"'>, pegtl::opt<pegtl::one<'"'>>>>, pegtl::plus<not_3quote>> {};
-		struct quote3 : pegtl::if_must<quote3_delim, quote3_content, quote3_delim> {};
+		struct quote3 : pegtl::if_must<quote3_delim, quote3_content, pegtl::sor<quote3_delim, ec_triple_close_quote>> {};
 
         struct triple_quoted_string : pegtl::sor<quote3, apostrophe3> {};
 
         //single-quote block
+		struct ec_single_close_quote : pegtl::success {};
 		struct apostrophe1_delim : TAO_PEGTL_STRING("'") {};
 		struct apostrophe1_content : pegtl::star<not_1apostrophe> {};
-		struct apostrophe1 : pegtl::if_must<apostrophe1_delim, apostrophe1_content, apostrophe1_delim> {};
+		struct apostrophe1 : pegtl::if_must<apostrophe1_delim, apostrophe1_content, pegtl::sor<apostrophe1_delim, ec_single_close_quote>> {};
 
 		struct quote1_delim : TAO_PEGTL_STRING("\"") {};
 		struct quote1_content : pegtl::star<not_1quote> {};
-		struct quote1 : pegtl::if_must<quote1_delim, quote1_content, quote1_delim> {};
+		struct quote1 : pegtl::if_must<quote1_delim, quote1_content, pegtl::sor<quote1_delim, ec_single_close_quote>> {};
 
 		struct single_quoted_string : pegtl::sor<quote1, apostrophe1> {};
 
@@ -95,6 +97,7 @@ namespace row::cif
 		//other values
 		struct lst;
 		struct table;
+		struct data_name;
 
 		//special data values
 		struct not_applicable : pegtl::one<'.'> {};
@@ -104,24 +107,35 @@ namespace row::cif
 		struct value : pegtl::sor<special, text_field, unquoted_string, triple_quoted_string, single_quoted_string, lst, table> {};
 
         //Table
-		struct table_key : pegtl::sor<triple_quoted_string, single_quoted_string> {};
+		struct ec_table_ws : whitespace {};
+		struct ec_table_key_format : pegtl::sor<text_field, unquoted_string> {};
+		struct ec_table_last_value_missing : pegtl::success {};
+		struct ec_table_colon_missing : pegtl::success {};
+		struct ec_table_missing_close : pegtl::success {};;
+
+
+		//struct item : pegtl::if_must<data_name, whitespace, data_value, ws_or_eof, pegtl::opt<ec_data_values>, pegtl::opt<ws_or_eof>> {};
+
+		struct table_key : pegtl::sor<triple_quoted_string, single_quoted_string, ec_table_key_format> {};
 		struct table_value : value {};
-        struct table_entry : pegtl::if_must<table_key, pegtl::one<':'>, pegtl::opt<whitespace>, table_value> {};
+        struct table_entry : pegtl::if_must<table_key, pegtl::opt<ec_table_ws>, pegtl::sor<pegtl::one<':'>, ec_table_colon_missing>, pegtl::opt<whitespace>, pegtl::sor<table_value, ec_table_last_value_missing>> {};
 		struct table_begin : pegtl::one<'{'> {};
 		struct table_end : pegtl::one<'}'> {};
 		struct table : pegtl::if_must <
 			                      table_begin,
 			                      pegtl::opt<pegtl::opt<whitespace>, table_entry, pegtl::star<whitespace, table_entry>>,
-			                      pegtl::opt<whitespace>,
-			                      table_end
+			                      pegtl::opt<whitespace, pegtl::not_at<pegtl::one<'_'>>>,
+			                      pegtl::sor<table_end, ec_table_missing_close>
 		                         >{};
 
 		//List
+		struct ec_list_missing_close : pegtl::success {};
+		struct ec_list_comma : pegtl::one<','> {};
 		struct lst_begin : pegtl::one<'['> {};
 		struct lst_end : pegtl::one<']'> {};
 		struct lst_value : value {};
-		struct lst_values : pegtl::opt<pegtl::opt<whitespace>, lst_value, pegtl::star<whitespace, lst_value>> {};
-		struct lst : pegtl::if_must<lst_begin, lst_values, /*pegtl::opt<whitespace>,*/ lst_end> {};
+		struct lst_values : pegtl::seq<pegtl::opt<whitespace>, lst_value, pegtl::opt<ec_list_comma>, pegtl::star<whitespace, lst_value, pegtl::opt<ec_list_comma>>> {};
+		struct lst : pegtl::if_must<lst_begin, pegtl::opt<lst_values>, pegtl::opt<whitespace, pegtl::not_at<pegtl::one<'_'>>>, pegtl::sor<lst_end, ec_list_missing_close>> {};
 
         //Data name    
 		struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<non_blank_char>, TAO_PEGTL_RAISE_MESSAGE("Malformed data name.")>> {};
@@ -136,8 +150,11 @@ namespace row::cif
 		struct loop : pegtl::if_must<loop_begin, loop_data_names, loop_data_values, loop_end> {};
 
         //Data
-		struct data_value : value {};
-		struct item : pegtl::if_must<data_name, whitespace, pegtl::if_then_else<data_value, ws_or_eof, TAO_PEGTL_RAISE_MESSAGE("Malformed or missing value.")>, pegtl::discard> {};
+		struct ec_list_missing_open : pegtl::one<']'> {};;
+		struct ec_extra_data_values : pegtl::plus<pegtl::sor<value, ec_list_missing_open>, pegtl::star<whitespace>> {};
+		struct data_value : pegtl::sor<value, ec_list_missing_open> {};
+		struct item : pegtl::if_must<data_name, whitespace, data_value, ws_or_eof, pegtl::opt<ec_extra_data_values>, pegtl::opt<ws_or_eof>> {};
+		//struct item : pegtl::if_must<data_name, whitespace, pegtl::if_then_else<data_value, ws_or_eof, TAO_PEGTL_RAISE_MESSAGE("Malformed or missing value.")>, pegtl::discard> {};
 		struct data : pegtl::sor<item, loop> {};
 
         //Container code
@@ -305,11 +322,83 @@ namespace row::cif
     template<typename Rule>
     struct Action_inner : pegtl::nothing<Rule> {};
 
+	template<> struct action<rules::ec_triple_close_quote>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Missing closing \"\"\" or '''. |" << in.position() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::ec_list_comma>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### List uses ',' to separate items.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_list_missing_close>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Missing list close character.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_list_missing_open>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Missing list begin character.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_table_last_value_missing>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Table last value missing.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_table_key_format>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Table keys to be delimited with single- or triple-quotes only.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_table_ws>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Whitespace between table key and ':'\n";
+		}
+	};
+
+	template<> struct action<rules::ec_single_close_quote>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### Missing closing \" or '.\n";
+		}
+	};
+
+	template<> struct action<rules::ec_extra_data_values>
+	{
+		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "### ec_data_values: |" << in.string() << "|\n";
+		}
+	};
+
 	template<> struct action<rules::ec_data_heading>
 	{
 		template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "ec_data_heading: |" << in.string() << "|\n";
+			std::cout << "### ec_data_heading: |" << in.string() << "|\n";
 		}
 	};
 
