@@ -4,11 +4,12 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "tao_dev/pegtl.hpp"
+#include "tao/pegtl.hpp"
 
 #include "cif2_rules.hpp"
 #include "cif2_actions.hpp"
-#include "cif2_errors.hpp"
+#include "cif2_control.hpp"
+#include "..\structure\structure.hpp"
 
 namespace row::cif
 {
@@ -24,8 +25,11 @@ namespace row::cif
         try
         {
             //Status status{};
-            states::Buffer buffer{};
+            states::Buffer buffer{in.source()};
 			pegtl::parse < rules::CIF2_file, actions::action> (in, buffer);
+
+            const std::string cif_json = tao::json::to_string(buffer.build_value.value);
+            std::cout << "\n###########################\n" << cif_json << '\n';
         }
         catch (pegtl::parse_error& e)
         {

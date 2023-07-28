@@ -4,12 +4,14 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "tao_dev/pegtl.hpp"
+#include "tao/pegtl.hpp"
 
 //#include "ciffile.hpp"
 //#include "cifexcept.hpp"
 #include "cif2_rules.hpp"
 #include "cif2_states.hpp"
+#include "cif2_states.hpp"
+#include "..\structure\structure.hpp"
 
 namespace row::cif::actions
 {
@@ -155,14 +157,46 @@ namespace row::cif::actions
 	template<typename Rule>
 	struct action : pegtl::nothing<Rule> {};
 
-	template<typename Rule>
-	struct Action_inner : pegtl::nothing<Rule> {};
+	
+	//error correction actions  ec_illegal_unquote_char
+
+	template<> struct action<rules::ec_illegal_unquote_char>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("[, ], {, or } found in unquoted string.", in.position());
+		}
+	};
+
+	template<> struct action<rules::ec_no_loop_tags>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("No loop tags found.", in.position());
+		}
+	};
+
+	template<> struct action<rules::ec_missing_tag_name>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("Data name missing a name.", in.position());
+		}
+	};
+
+	template<> struct action<rules::ec_data_block_name_missing>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("Data block missing a name.", in.position());
+		}
+	};
 
 	template<> struct action<rules::ec_triple_close_quote>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Missing closing \"\"\" or '''. |" << in.position() << "|\n";
+			buffer.add_error("Triple-quote missing closing quotes.", in.position());
 		}
 	};
 
@@ -170,7 +204,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### List uses ',' to separate items.\n";
+			buffer.add_error("List contains comma as separator.", in.position());
 		}
 	};
 
@@ -178,7 +212,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Missing list close character.\n";
+			buffer.add_error("List missing closing character.", buffer.position);
 		}
 	};
 
@@ -186,7 +220,23 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Missing list begin character.\n";
+			buffer.add_error("List missing opening character.", in.position());
+		}
+	};
+
+	template<> struct action<rules::ec_table_missing_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("Table missing closing character.", buffer.position);
+		}
+	}; 
+
+	template<> struct action<rules::ec_table_colon_missing>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("Table entry missing colon.", in.position());
 		}
 	};
 
@@ -194,7 +244,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Table last value missing.\n";
+			buffer.add_error("Table value missing.", in.position());
 		}
 	};
 
@@ -202,7 +252,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Table keys to be delimited with single- or triple-quotes only.\n";
+			buffer.add_error("Table key must be single- or triple-delimited string.", in.position());
 		}
 	};
 
@@ -210,7 +260,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Whitespace between table key and ':'\n";
+			buffer.add_error("Whitespace between table key and colon.", in.position());
 		}
 	};
 
@@ -218,7 +268,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### Missing closing \" or '.\n";
+			buffer.add_error("Missing closing single-quote delimiter.", in.position());
 		}
 	};
 
@@ -226,7 +276,23 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### ec_data_values: |" << in.string() << "|\n";
+			buffer.add_error("Extra values after data value.", in.position());
+		}
+	}; 
+
+	template<> struct action<rules::ec_multiple_data_name>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.add_error("Extra data name after data name.", in.position());
+		}
+	};
+
+	template<> struct action<rules::ec_multiple_data_names>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{			
+			buffer.add_error("Extra data names after data name.", in.position());
 		}
 	};
 
@@ -234,7 +300,31 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "### ec_data_heading: |" << in.string() << "|\n";
+			//todo: get copy of in.string. Replace all ' ' and '\t' with '_' and store in buffer.content.
+			buffer.add_error("Extra names after data block name.", in.position());
+		}
+	};
+
+
+
+
+	//normal actions
+
+	//######################################################################
+	template<> struct action<rules::text_delim_open>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.position = in.position();
+			std::cout << "text_delim_open: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::text_delim_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "text_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
@@ -251,7 +341,25 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "text_field concluded.\n";
+			std::cout << "text_field: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
+	template<> struct action<rules::apostrophe3_delim_open>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.position = in.position();
+			std::cout << "apostrophe3_delim_open: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::apostrophe3_delim_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "apostrophe3_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
@@ -268,7 +376,25 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe3 concluded.\n";
+			std::cout << "apostrophe3: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
+	template<> struct action<rules::quote3_delim_open>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.position = in.position();
+			std::cout << "quote3_delim_open: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::quote3_delim_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "quote3_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
@@ -285,7 +411,25 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "quote3 concluded.\n";
+			std::cout << "quote3: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
+	template<> struct action<rules::apostrophe1_delim_open>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.position = in.position();
+			std::cout << "apostrophe1_delim_open: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::apostrophe1_delim_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "apostrophe1_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
@@ -302,7 +446,25 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "apostrophe1 concluded.\n";
+			std::cout << "apostrophe1: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
+	template<> struct action<rules::quote1_delim_open>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			buffer.position = in.position();
+			std::cout << "quote1_delim_open: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::quote1_delim_close>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "quote1_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
@@ -319,10 +481,11 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "quote1 concluded.\n";
+			std::cout << "quote1: |" << in.string() << "|\n";
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::unquoted_string>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
@@ -332,11 +495,13 @@ namespace row::cif::actions
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::not_applicable>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "NA\n";
+			buffer.is_notapplicable = true;
+			std::cout << "not_applicable: |" << in.string() << "|\n";
 		}
 	};
 
@@ -344,15 +509,46 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "UNK\n";
+			buffer.is_unknown = true;
+			std::cout << "not_applicable: |" << in.string() << "|\n";
 		}
 	};
 
+	template<> struct action<rules::special>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "special: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
 	template<> struct action<rules::value>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "value concluded.\n";
+			std::cout << "value: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
+	template<> struct action<rules::table_begin>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			++buffer.table_depth;
+			buffer.is_table_or_list = true;
+			buffer.position = in.position();
+			std::cout << "table_begin: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::table_end>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			--buffer.table_depth;
+			std::cout << "table_end: |" << in.string() << "|\n";
 		}
 	};
 
@@ -360,7 +556,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "table_key concluded.\n";
+			std::cout << "table_key: |" << in.string() << "|\n";
 		}
 	};
 
@@ -368,7 +564,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "table_value concluded.\n";
+			std::cout << "table_value: |" << in.string() << "|\n";
 		}
 	};
 
@@ -376,31 +572,35 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "table_entry concluded.\n";
+			std::cout << "table_entry: |" << in.string() << "|\n";
 		}
 	};
-
-	template<> struct action<rules::table_begin>
-	{
-		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "TABLE BEGINS.\n";
-		}
-	};
-
 	template<> struct action<rules::table>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "TABLE ENDS.\n";
+			std::cout << "table: |" << in.string() << "|\n";
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::lst_begin>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "LIST BEGINS.\n";
+			++buffer.list_depth;
+			buffer.is_table_or_list = true;
+			buffer.position = in.position();
+			std::cout << "lst_begin: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::lst_end>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			--buffer.list_depth;
+			std::cout << "lst_end: |" << in.string() << "|\n";
 		}
 	};
 
@@ -408,15 +608,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "list value concluded.\n";
-		}
-	};
-
-	template<> struct action<rules::lst>
-	{
-		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-		{
-			std::cout << "LIST ENDS.\n";
+			std::cout << "lst_value: |" << in.string() << "|\n";
 		}
 	};
 
@@ -424,10 +616,19 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Got all list values.\n";
+			std::cout << "lst_values: |" << in.string() << "|\n";
 		}
 	};
 
+	template<> struct action<rules::lst>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "lst: |" << in.string() << "|\n";
+		}
+	};
+
+	//######################################################################
 	template<> struct action<rules::data_name>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
@@ -436,11 +637,21 @@ namespace row::cif::actions
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::loop_begin>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "LOOP BEGINS.\n";
+			buffer.position = in.position();
+			std::cout << "loop_begin: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::loop_end>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "loop_end: |" << in.string() << "|\n";
 		}
 	};
 
@@ -448,6 +659,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
+			++buffer.loop_tags;
 			std::cout << "loop_data_name: |" << in.string() << "|\n";
 		}
 	};
@@ -456,6 +668,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
+			++buffer.loop_values;
 			std::cout << "loop_value: |" << in.string() << "|\n";
 		}
 	};
@@ -464,7 +677,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Loop header concluded.\n";
+			std::cout << "loop_data_names: |" << in.string() << "|\n";
 		}
 	};
 
@@ -472,7 +685,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Loop data values concluded.\n";
+			std::cout << "loop_data_values: |" << in.string() << "|\n";
 		}
 	};
 
@@ -480,10 +693,26 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "LOOP ENDS.\n";
+			if(buffer.loop_tags > 0)
+			{
+				if (buffer.loop_values == 0)
+				{
+					buffer.add_error("No values in loop.", buffer.position);
+					std::cout << "No values in loop.\n";
+				}
+
+				size_t should_be_zero = buffer.loop_values % buffer.loop_tags;
+				if(should_be_zero != 0)
+				{
+					buffer.add_error("Number of loop values inconsistent with number of loop tags.", buffer.position);
+					std::cout << "Number of loop values inconsistent with number of loop tags: |" << should_be_zero << "|\n";
+				}
+			}
+			std::cout << "loop: |" << in.string() << "|\n";
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::data_value>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
@@ -492,11 +721,11 @@ namespace row::cif::actions
 		}
 	};
 
-	template<> struct action<rules::item>
+	template<> struct action<rules::pair>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Pair concluded.\n";
+			std::cout << "pair: |" << in.string() << "|\n";
 		}
 	};
 
@@ -504,10 +733,12 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Data concluded.\n";
+			buffer.reset();
+			std::cout << "data: |" << in.string() << "|\n";
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::container_code>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
@@ -517,11 +748,12 @@ namespace row::cif::actions
 		}
 	};
 
+	//######################################################################
 	template<> struct action<rules::frame_content>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "Frame content concluded.\n";
+			std::cout << "frame_content: |" << in.string() << "|\n";
 		}
 	};
 
@@ -529,7 +761,7 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "SAVEFRAME BEGINS.\n";
+			std::cout << "save_heading: |" << in.string() << "|\n";
 		}
 	};
 
@@ -537,23 +769,25 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "SAVEFRAME ENDS.\n";
+			std::cout << "save_frame: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::block_content>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "block_content: |" << in.string() << "|\n";
-	//	}
-	//};
+	//######################################################################
+	template<> struct action<rules::block_content>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+		std::cout << "block_content: |" << in.string() << "|\n";
+		}
+	};
 
 	template<> struct action<rules::data_heading>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "DATA BLOCK BEGINS.\n";
+			buffer.curr_block = buffer.content;
+			std::cout << "data_heading: |" << in.string() << "| (" << buffer.content << ")\n";
 		}
 	};
 
@@ -561,34 +795,32 @@ namespace row::cif::actions
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "DATA BLOCK ENDS.\n";
+			std::cout << "data_block: |" << in.string() << "|\n";
 		}
 	};
 
-	//template<> struct Action<rules::magic_code>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "magic_code: |" << in.string() << "|\n";
-	//	}
-	//};
+	//######################################################################
+	template<> struct action<rules::magic_code>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "magic_code: |" << in.string() << "|\n";
+		}
+	};
 
-	//template<> struct Action<rules::file_heading>
-	//{
-	//	template<typename Input> static void apply(const Input& in) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
-	//	{
-	//		std::cout << "file_heading: |" << in.string() << "|\n";
-	//	}
-	//};
+	template<> struct action<rules::file_heading>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
+		{
+			std::cout << "file_heading: |" << in.string() << "|\n";
+		}
+	};
 
 	template<> struct action<rules::CIF2_file>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] states::Buffer& buffer) //, Cif& out, Status& status, [[maybe_unused]] Buffer& buffer)
 		{
-			std::cout << "CIF2 file concluded.\n";
+			std::cout << "CIF2_file: |" << in.string() << "|\n";
 		}
 	};
-
-
-
 }

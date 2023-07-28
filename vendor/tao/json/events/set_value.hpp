@@ -133,6 +133,13 @@ namespace tao::json::events
          value_ = std::move( stack_.back() );
          stack_.pop_back();
       }
+
+      void reset()
+      {
+          value_.set_uninitialized();
+          stack_.clear();
+          keys_.clear();
+      }
    };
 
    using set_value = set_basic_value< traits >;

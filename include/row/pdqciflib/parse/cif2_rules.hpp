@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "tao_dev/pegtl.hpp"
+#include "tao/pegtl.hpp"
 
 //#include "ciffile.hpp"
 //#include "cifexcept.hpp"
@@ -59,48 +59,62 @@ namespace row::cif::rules
 	struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
 
     //text block
-	struct text_delim : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
-	struct end_text_delim : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
-	struct text_content : pegtl::star<pegtl::not_at<end_text_delim>, allchars> {};
-	struct text_field : pegtl::if_must<text_delim, text_content, end_text_delim> {};
+	struct text_delim_open : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
+	struct text_delim_close : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
+	struct text_content : pegtl::star<pegtl::not_at<text_delim_close>, allchars> {};
+	struct text_field : pegtl::if_must<text_delim_open, text_content, text_delim_close> {};
 
     //triple-quote block
 	struct ec_triple_close_quote : pegtl::success {};
+
 	struct apostrophe3_delim : TAO_PEGTL_STRING("'''") {};
+	struct apostrophe3_delim_open : apostrophe3_delim {};
+	struct apostrophe3_delim_close : apostrophe3_delim {};
 	struct apostrophe3_content : pegtl::star<pegtl::opt<pegtl::seq<pegtl::one<'\''>, pegtl::opt<pegtl::one<'\''>>>>, pegtl::plus<not_3apostrophe>> {};
-	struct apostrophe3 : pegtl::if_must<apostrophe3_delim, apostrophe3_content, pegtl::sor<apostrophe3_delim, ec_triple_close_quote>> {};
+	struct apostrophe3 : pegtl::if_must<apostrophe3_delim_open, apostrophe3_content, pegtl::sor<apostrophe3_delim_close, ec_triple_close_quote>> {};
 
 	struct quote3_delim : TAO_PEGTL_STRING("\"\"\"") {};
+	struct quote3_delim_open : quote3_delim {};
+	struct quote3_delim_close : quote3_delim {};
 	struct quote3_content : pegtl::star<pegtl::opt<pegtl::seq<pegtl::one<'"'>, pegtl::opt<pegtl::one<'"'>>>>, pegtl::plus<not_3quote>> {};
-	struct quote3 : pegtl::if_must<quote3_delim, quote3_content, pegtl::sor<quote3_delim, ec_triple_close_quote>> {};
+	struct quote3 : pegtl::if_must<quote3_delim_open, quote3_content, pegtl::sor<quote3_delim_close, ec_triple_close_quote>> {};
 
     struct triple_quoted_string : pegtl::sor<quote3, apostrophe3> {};
 
     //single-quote block
 	struct ec_single_close_quote : pegtl::success {};
+
 	struct apostrophe1_delim : TAO_PEGTL_STRING("'") {};
+	struct apostrophe1_delim_open : apostrophe1_delim {};
+	struct apostrophe1_delim_close : apostrophe1_delim {};
 	struct apostrophe1_content : pegtl::star<not_1apostrophe> {};
-	struct apostrophe1 : pegtl::if_must<apostrophe1_delim, apostrophe1_content, pegtl::sor<apostrophe1_delim, ec_single_close_quote>> {};
+	struct apostrophe1 : pegtl::if_must<apostrophe1_delim_open, apostrophe1_content, pegtl::sor<apostrophe1_delim_close, ec_single_close_quote>> {};
 
 	struct quote1_delim : TAO_PEGTL_STRING("\"") {};
+	struct quote1_delim_open : quote1_delim {};
+	struct quote1_delim_close : quote1_delim {};
 	struct quote1_content : pegtl::star<not_1quote> {};
-	struct quote1 : pegtl::if_must<quote1_delim, quote1_content, pegtl::sor<quote1_delim, ec_single_close_quote>> {};
+	struct quote1 : pegtl::if_must<quote1_delim_open, quote1_content, pegtl::sor<quote1_delim_close, ec_single_close_quote>> {};
 
 	struct single_quoted_string : pegtl::sor<quote1, apostrophe1> {};
 
     //unquoted string
-    struct unquoted_string : pegtl::seq<pegtl::not_at<pegtl::sor<pegtl::seq<pegtl::sor<DATA, SAVE>, pegtl::star<non_blank_char>>, LOOP, GLOBAL, STOP>>, lead_char, pegtl::star<restrict_char>> {};
-
-	//other values
-	struct lst;
-	struct table;
-	struct data_name;
+	struct ec_illegal_unquote_char : pegtl::seq<non_blank_char, restrict_char> {};
+    struct unquoted_string : pegtl::seq<pegtl::not_at<pegtl::sor<pegtl::seq<pegtl::sor<DATA, SAVE>, pegtl::star<non_blank_char>>, LOOP, GLOBAL, STOP>>, 
+		                                lead_char, pegtl::star<pegtl::sor<restrict_char, ec_illegal_unquote_char>>
+	                                   > {};
 
 	//special data values
 	struct not_applicable : pegtl::one<'.'> {};
 	struct unknown : pegtl::one<'?'> {};
 	struct special : pegtl::sor<not_applicable, unknown> {};
 
+	//forward declarations for rules
+	struct lst;
+	struct table;
+	struct data_name;
+
+	//single value
 	struct value : pegtl::sor<special, text_field, unquoted_string, triple_quoted_string, single_quoted_string, lst, table> {};
 
     //Table
@@ -116,43 +130,55 @@ namespace row::cif::rules
 	struct table_key : pegtl::sor<triple_quoted_string, single_quoted_string, ec_table_key_format> {};
 	struct table_value : value {};
     struct table_entry : pegtl::if_must<table_key, pegtl::opt<ec_table_ws>, pegtl::sor<pegtl::one<':'>, ec_table_colon_missing>, pegtl::opt<whitespace>, pegtl::sor<table_value, ec_table_last_value_missing>> {};
+	struct table_entries: pegtl::seq<pegtl::opt<whitespace>, table_entry, pegtl::star<whitespace, table_entry>>{};
 	struct table_begin : pegtl::one<'{'> {};
 	struct table_end : pegtl::one<'}'> {};
 	struct table : pegtl::if_must <
-			                    table_begin,
-			                    pegtl::opt<pegtl::opt<whitespace>, table_entry, pegtl::star<whitespace, table_entry>>,
-			                    pegtl::opt<whitespace, pegtl::not_at<pegtl::one<'_'>>>,
-			                    pegtl::sor<table_end, ec_table_missing_close>
-		                        >{};
+	                               table_begin,
+	                               pegtl::opt<table_entries>,
+	                               pegtl::opt<whitespace, pegtl::not_at<pegtl::sor<pegtl::one<'_'>, reserved>>>,
+	                               pegtl::sor<table_end, ec_table_missing_close>
+	                              > {};
 
 	//List
 	struct ec_list_missing_close : pegtl::success {};
 	struct ec_list_comma : pegtl::one<','> {};
+
 	struct lst_begin : pegtl::one<'['> {};
 	struct lst_end : pegtl::one<']'> {};
 	struct lst_value : value {};
 	struct lst_values : pegtl::seq<pegtl::opt<whitespace>, lst_value, pegtl::opt<ec_list_comma>, pegtl::star<whitespace, lst_value, pegtl::opt<ec_list_comma>>> {};
-	struct lst : pegtl::if_must<lst_begin, pegtl::opt<lst_values>, pegtl::opt<whitespace, pegtl::not_at<pegtl::one<'_'>>>, pegtl::sor<lst_end, ec_list_missing_close>> {};
+	struct lst : pegtl::if_must<
+		lst_begin,
+		pegtl::opt<lst_values>,
+		pegtl::opt<whitespace, pegtl::not_at<pegtl::sor<pegtl::one<'_'>, reserved>>>,
+		pegtl::sor<lst_end, ec_list_missing_close>
+	>
+	{};
 
-    //Data name    
-	struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<non_blank_char>, TAO_PEGTL_RAISE_MESSAGE("Malformed data name.")>> {};
+    //Data name  
+	struct ec_missing_tag_name : pegtl::success {};
+	struct data_name : pegtl::seq<pegtl::one<'_'>, pegtl::sor<pegtl::plus<non_blank_char>, ec_missing_tag_name>> {};
 
     //Loop
+	struct ec_no_loop_tags : pegtl::success {};
 	struct loop_begin : pegtl::seq<LOOP, whitespace> {};
 	struct loop_end : pegtl::opt<ws_or_eof> {};
 	struct loop_data_name : data_name {};
 	struct loop_value : value {};
-	struct loop_data_names : pegtl::plus<pegtl::seq<loop_data_name, whitespace, pegtl::discard>> {};
+	struct loop_data_names : pegtl::sor<pegtl::plus<pegtl::seq<loop_data_name, whitespace, pegtl::discard>>, ec_no_loop_tags> {};
 	struct loop_data_values : pegtl::sor<pegtl::plus<pegtl::seq<loop_value, ws_or_eof, pegtl::discard>>, pegtl::at<pegtl::sor<reserved, pegtl::eof>>> {};
 	struct loop : pegtl::if_must<loop_begin, loop_data_names, loop_data_values, loop_end> {};
 
     //Data
 	struct ec_list_missing_open : pegtl::one<']'> {};;
 	struct ec_extra_data_values : pegtl::plus<pegtl::sor<value, ec_list_missing_open>, pegtl::star<whitespace>> {};
+	struct ec_multiple_data_name : data_name {};
+	struct ec_multiple_data_names : pegtl::seq<ec_multiple_data_name, pegtl::star<whitespace, ec_multiple_data_name>> {};
+
 	struct data_value : pegtl::sor<value, ec_list_missing_open> {};
-	struct item : pegtl::if_must<data_name, whitespace, data_value, ws_or_eof, pegtl::opt<ec_extra_data_values>, pegtl::opt<ws_or_eof>> {};
-	//struct item : pegtl::if_must<data_name, whitespace, pegtl::if_then_else<data_value, ws_or_eof, TAO_PEGTL_RAISE_MESSAGE("Malformed or missing value.")>, pegtl::discard> {};
-	struct data : pegtl::sor<item, loop> {};
+	struct pair : pegtl::if_must<data_name, whitespace, pegtl::sor<data_value, ec_multiple_data_names>, ws_or_eof, pegtl::opt<ec_extra_data_values>, pegtl::opt<ws_or_eof>> {};
+	struct data : pegtl::sor<pair, loop> {};
 
     //Container code
     struct container_code : pegtl::plus<non_blank_char> {};
@@ -165,9 +191,10 @@ namespace row::cif::rules
 
     //data block
 	struct ec_data_heading : pegtl::seq<pegtl::plus<ws>, pegtl::plus<value, pegtl::star<ws>>> {};
+	struct ec_data_block_name_missing : pegtl::success {};
 
 	struct block_content : pegtl::sor<data, save_frame> {};
-	struct data_heading : pegtl::if_must<DATA, container_code, pegtl::opt<ec_data_heading>> {};
+	struct data_heading : pegtl::if_must<DATA, pegtl::sor<container_code, ec_data_block_name_missing>, pegtl::opt<ec_data_heading>> {};
 	struct data_block : pegtl::if_must<data_heading, whitespace, pegtl::star<block_content>> {};
 
     //CIF2 file
@@ -175,8 +202,8 @@ namespace row::cif::rules
     struct file_heading : pegtl::seq<pegtl::opt<pegtl8::bom>, magic_code, pegtl::star<ws>> {};
     struct CIF2_file : pegtl::if_must<file_heading, pegtl::opt<pegtl::eol, 
 			                                                    pegtl::opt<pegtl::opt<whitespace>,
-			                                                                pegtl::plus<data_block>
-															                >, 
+			                                                               pegtl::plus<data_block>
+															              >, 
 			                                                    pegtl::opt<whitespace>
 		                                                        >,
 		                                pegtl::eof

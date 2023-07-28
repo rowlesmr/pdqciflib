@@ -14,7 +14,6 @@
 #include "internal/crlf_eol.hpp"
 #include "internal/lf_crlf_eol.hpp"
 #include "internal/lf_eol.hpp"
-#include "internal/cr_crlf_lf_eol.hpp"
 
 namespace TAO_PEGTL_NAMESPACE
 {
@@ -29,7 +28,6 @@ namespace TAO_PEGTL_NAMESPACE
          // clang-format off
          struct cr : internal::cr_eol {};
          struct cr_crlf : internal::cr_crlf_eol {};
-         struct cr_crlf_lf : internal::cr_crlf_lf_eol {};
          struct crlf : internal::crlf_eol {};
          struct lf : internal::lf_eol {};
          struct lf_crlf : internal::lf_crlf_eol {};
