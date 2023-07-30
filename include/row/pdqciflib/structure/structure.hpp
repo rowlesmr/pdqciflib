@@ -201,9 +201,9 @@ namespace row::cif {
 			curr_block->insert({
 					 { "Tags", json::empty_array },
 					 { "Loops", json::empty_array },
-					 { "Frames", json::empty_array }
+					 { "Frames", { { "Frames", json::empty_array } } }
 				});
-
+			//curr_block->at("Frames").insert({ { "Frames", json::empty_array } });
 			return Block(curr_block);
 		}
 		

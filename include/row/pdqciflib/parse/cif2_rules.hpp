@@ -59,10 +59,30 @@ namespace row::cif::rules
 	struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
 
     //text block
-	struct text_delim_open : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
-	struct text_delim_close : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
-	struct text_content : pegtl::star<pegtl::not_at<text_delim_close>, allchars> {};
-	struct text_field : pegtl::if_must<text_delim_open, text_content, text_delim_close> {};
+	struct sc_text_delim_open : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
+	struct sc_text_delim_close : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
+	struct sc_text_content : pegtl::star<pegtl::not_at<sc_text_delim_close>, allchars> {};
+	struct sc_text_field : pegtl::if_must<sc_text_delim_open, sc_text_content, sc_text_delim_close> {};
+
+
+
+	//rules for folded semicolon textfields
+	struct f_text_continuation : pegtl::seq<pegtl::one<'\\'>, pegtl::star<ws>, pegtl::eol> {};
+	struct f_text_delim_open : pegtl::seq<sc_text_delim_open, f_text_continuation> {};
+	struct f_text_delim_close : sc_text_delim_close {};
+	struct f_text_content_for_parsing : sc_text_content {};
+	struct folded_text_field : pegtl::if_must<f_text_delim_open, f_text_content_for_parsing, f_text_delim_close> {};
+
+
+	struct fsctf_text : pegtl::plus<pegtl::not_at<f_text_continuation>, allchars> {};
+	struct fsctf_line_without_continuation : fsctf_text {};
+	struct fsctf_line_with_continuation : pegtl::seq<fsctf_text, f_text_continuation> {};
+	struct fsctf_grammar : pegtl::seq<pegtl::star<pegtl::plus<fsctf_line_with_continuation>, pegtl::star<fsctf_line_without_continuation>>, fsctf_line_without_continuation> {};
+
+
+	struct text_field : sc_text_field {};
+
+
 
     //triple-quote block
 	struct ec_triple_close_quote : pegtl::success {};

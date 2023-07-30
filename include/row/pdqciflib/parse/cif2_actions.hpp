@@ -359,37 +359,37 @@ namespace row::cif::actions
 	//normal actions
 
 	//######################################################################
-	template<> struct action<rules::text_delim_open>
+	template<> struct action<rules::sc_text_delim_open>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
 		{
 			buffer.value_position = in.position();
-			std::cout << "text_delim_open: |" << in.string() << "|\n";
+			std::cout << "sc_text_delim_open: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct action<rules::text_delim_close>
+	template<> struct action<rules::sc_text_delim_close>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
 		{
-			std::cout << "text_delim_close: |" << in.string() << "|\n";
+			std::cout << "sc_text_delim_close: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct action<rules::text_content>
+	template<> struct action<rules::sc_text_content>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
 		{
 			buffer.content = in.string();
-			std::cout << "text_content: |" << in.string() << "|\n";
+			std::cout << "sc_text_content: |" << in.string() << "|\n";
 		}
 	};
 
-	template<> struct action<rules::text_field>
+	template<> struct action<rules::sc_text_field>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
 		{
-			std::cout << "text_field: |" << in.string() << "|\n";
+			std::cout << "sc_text_field: |" << in.string() << "|\n";
 		}
 	};
 

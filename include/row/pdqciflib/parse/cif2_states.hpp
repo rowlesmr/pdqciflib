@@ -52,22 +52,6 @@ namespace row::cif::states
 
 
 
-	/*TODO: things to buffer
-	container_code
-	text_content
-	apostrophe3_content
-	quote3_content
-	apostrophe1_content
-	quote1_content
-	unquoted_string
-	is_unknown
-	is_notApplicable
-
-	triple_quote_string start line and pos
-	text_field start line and pos
-	loop start line and pos
-	*/
-
 	//to temporarily store data before putting it in the Cif object
 	struct Buffer
 	{
