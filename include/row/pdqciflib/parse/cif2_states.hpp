@@ -13,6 +13,7 @@
 //#include "ciffile.hpp"
 //#include "cifexcept.hpp"
 #include "cif2_rules.hpp"
+#include "../structure/structure.hpp"
 
 namespace row::cif::states
 {
@@ -71,71 +72,104 @@ namespace row::cif::states
 	struct Buffer
 	{
 		std::string source{};
-		std::string curr_block{};
+		Block curr_block{ nullptr };
 		std::string curr_tag{};
 		
 		std::string content{};
-		pegtl::position position;
 		std::vector<ErrorCorrection> errors{};
+
+		pegtl::position value_position;
+		pegtl::position tag_position;
+		pegtl::position loop_position;
+		pegtl::position block_position;
 
 		bool is_unknown{ false };
 		bool is_notapplicable{ false };
 		
 		bool is_table_or_list{ false };
+		bool just_closed_table_or_list{ false };
 
 		size_t list_depth{ 0 };
 		size_t table_depth{ 0 };
 
-		size_t loop_tags{ 0 };
-		size_t loop_values{ 0 };
+		std::vector<dataname> loop_tags{};
+		std::vector<datavalue> loop_values{};
+
+		bool missing_tag_name{ false };
+
+		bool first_extra_data_value{ true };
+
 
 		json::events::to_value build_value;
 
 		Buffer() 
-			: position(0, 0, 0, "unknown") 
+			: value_position(0, 0, 0, "unknown"),
+			tag_position(0, 0, 0, "unknown"),
+			loop_position(0, 0, 0, "unknown"),
+			block_position(0, 0, 0, "unknown")
 		{};
 
 		explicit Buffer(std::string source) 
-			: source(std::move(source)), position(0,0,0,"unknown") 
+			: source(std::move(source)), 
+			value_position(0, 0, 0, "unknown"),
+			tag_position(0, 0, 0, "unknown"),
+			loop_position(0, 0, 0, "unknown"),
+			block_position(0, 0, 0, "unknown")
 		{};
 
 		void add_error(std::string message, pegtl::position position)
 		{
-			std::cout << "### " << message << ":" << position << '\n';
+			//std::cout << "### " << message << ":" << position << '\n';
 			errors.push_back({ std::move(message), std::move(position) });
 		}
 
-
-		void reset()
+		void reset_value()
 		{
-		    content.clear();
+			content.clear();
+			value_position.byte = 0;
+			value_position.column = 0;
+			value_position.line = 0;
 			is_unknown = false;
-			is_unknown = false;
-			position.byte = 0;
-			position.column = 0;
-			position.line = 0;
+			is_notapplicable = false;
 			is_table_or_list = false;
+			just_closed_table_or_list = false;
 			list_depth = 0;
 			table_depth = 0;
-			loop_tags = 0;
-			loop_values = 0;
-			curr_tag = "";
 			build_value.reset();
-			//build_value.stack_.clear();
-			//build_value.keys_.clear();
-			//build_value.value_.set_uninitialized();
+			missing_tag_name = false;
+			first_extra_data_value = true;
 		}
 
-		void clear()
+		void reset_tag()
 		{
-			reset();
+			tag_position.byte = 0;
+			tag_position.column = 0;
+			tag_position.line = 0;
+			curr_tag = "";
+		}
+
+		void reset_loop()
+		{
+			loop_tags.clear();
+			loop_values.clear();
+			loop_position.byte = 0;
+			loop_position.column = 0;
+			loop_position.line = 0;
+		}
+
+		void clear_all()
+		{
+			reset_value();
+			reset_tag();
+			reset_loop();
 			errors.clear();
 			source.clear();
-			position.source = "unknown";
+			value_position.source = "unknown";
+			tag_position.source = "unknown";
+			loop_position.source = "unknown";
+			block_position.source = "unknown";
 		}
 	};
-
-
 
 
 #if 0

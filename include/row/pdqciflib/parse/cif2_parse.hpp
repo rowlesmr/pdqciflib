@@ -13,11 +13,8 @@
 
 namespace row::cif
 {
-
     namespace pegtl = tao::pegtl;
     namespace pegtl8 = tao::pegtl::utf8;
-
-
 
     template<typename Input>
     void parse_input(Input&& in, bool printErr = true)
@@ -25,11 +22,12 @@ namespace row::cif
         try
         {
             //Status status{};
+            Cif cif{};
             states::Buffer buffer{in.source()};
-			pegtl::parse < rules::CIF2_file, actions::action> (in, buffer);
+			pegtl::parse < rules::CIF2_file, actions::action> (in, cif, buffer);
 
-            const std::string cif_json = tao::json::to_string(buffer.build_value.value);
-            std::cout << "\n###########################\n" << cif_json << '\n';
+            std::cout << tao::json::to_string(cif.file, 3) << '\n';
+            
         }
         catch (pegtl::parse_error& e)
         {

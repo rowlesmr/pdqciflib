@@ -1,5 +1,6 @@
 
 
+
 #include <iostream>
 #include <string>
 #include  <filesystem>
@@ -17,8 +18,32 @@
 
 
 
+
+
 int main() {
 
+	//row::cif::Cif cif{};
+	//cif.set_version("2.0");
+	//row::cif::Block blk = cif.add_block("block1");
+
+	//blk.add_dataitem("_tag1", "hello");
+	//blk.add_dataitem("_tag2", "there");
+	//blk.add_dataitem("_tag3", "world");
+	//blk.add_dataitem("_tag3", "three");
+
+
+
+	//std::vector<std::string> looptags {"_tagl4", "_tagl5", "_tagl6"};
+	//std::vector< tao::json::value> loopvals {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+
+	//blk.add_loop_dataitems(looptags, loopvals);
+
+
+
+	//std::cout << tao::json::to_string(cif.file, 3) << '\n';
+
+
+	//return 0;
 
 	const std::size_t issues = tao::pegtl::analyze< row::cif::rules::CIF2_file >(1);
 	std::cout << issues << '\n';
@@ -42,18 +67,15 @@ int main() {
 
 	std::string str{ R"(#\#CIF_2.0   
 data_block1
-_tag1 hellow
-_tag2 there
-
-loop_
-_tag3 _tag4
-how are you ?
-
+_tag4 12.34(5)
+_tag5  1 2 3 4
+_tag6 hello
 )" };
 
 
 
-		row::cif::read_string(str);
+	row::cif::read_string(str);
+	tao::pegtl::string_input in(str, "string");
 
 
 
@@ -66,7 +88,6 @@ how are you ?
 //	data_name
 //		_tag
 
-	tao::pegtl::string_input in(str, "string");
 
 	//const std::filesystem::path test_data_folder{ R"(C:\Users\184277j\Documents\GitHub\pdqciflib\pdqciflib\data\test_data)" };
 	//for (auto const& filename : std::filesystem::directory_iterator{ test_data_folder })

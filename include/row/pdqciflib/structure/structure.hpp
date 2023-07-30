@@ -14,7 +14,8 @@ namespace row::cif {
 
 	namespace json = tao::json;
 
-	using dataname = std::string;	    
+	using dataname = std::string;	 
+	using containercode = std::string;
 	using datavalue = json::value;
 	using jsonvalue = json::value;
 	using block = json::value;
@@ -23,55 +24,14 @@ namespace row::cif {
 
 	class Block
 	{
+	private:
+		block* blk{ nullptr };
+
 	public:
-		std::string name{};
 
-		block blk = {
-					 { "Tags", tao::json::empty_array },
-					 { "Loops", tao::json::empty_array },
-					 { "Frames", tao::json::empty_array }
-		            };
-		
-		explicit Block(std::string name)
-			: name(std::move(name))
+		explicit Block(block* blk)
+			: blk(blk)
 		{}
-
-		bool add_dataname(dataname tag)
-		{
-			// todo: convert tag to unicode canonical lower-case
-			if (already_has(tag))
-			{
-				return false;
-			}
-
-			blk.at("Tags").append({ tag });
-			blk.insert({ {tag, tao::json::empty_array} });
-			return true;
-		}
-
-		bool assign_datavalue(const dataname& tag, datavalue value)
-		{
-			// todo: convert tag to unicode canonical lower-case
-			if (!already_has(tag))
-			{
-				return false;
-			}
-			
-			blk.at(tag) = jsonvalue::array({ value });
-			return true;
-		}
-
-		bool assign_datavalues(const dataname& tag, std::vector<datavalue> values)
-		{
-			// todo: convert tag to unicode canonical lower-case
-			if (!already_has(tag))
-			{
-				return false;
-			}
-
-			blk.at(tag) = jsonvalue::array({ values });
-			return true;
-		}
 
 		bool add_dataitem(dataname tag, datavalue value)
 		{
@@ -80,14 +40,58 @@ namespace row::cif {
 				return false;
 			}
 
-			blk.at("Tags").append({ tag });
-			blk.insert({ {tag, jsonvalue::array({ value })} });
+			blk->at("Tags").append({ tag });
+			blk->insert({ {std::move(tag), jsonvalue::array({ std::move(value) })} });
 			return true;
 		}
 
-		bool create_loop(std::vector<dataname> loop_tags)
+		bool add_loop_dataitem(dataname tag, datavalue values)
 		{
-			auto& Tags = blk.at("Tags").get_array();
+			if (already_has(tag) || !values.is_array())
+			{
+				return false;
+			}
+
+			blk->at("Tags").append({ tag });
+			blk->insert({ {std::move(tag), std::move(values)} });
+			return true;
+		}
+
+		bool add_loop_dataitems(const std::vector<dataname>& tags, std::vector<datavalue> values)
+		{
+			auto& Tags = blk->at("Tags").get_array();
+			bool any_there = std::any_of(tags.cbegin(), tags.cend(), [&Tags, this](const dataname& tag)
+				{
+					return this->already_has(tag);
+				});
+
+			if (any_there)
+			{
+				return false;
+			}
+
+			size_t num_tags{ tags.size() };
+			size_t num_values{ values.size() };
+
+			for(const auto& tag : tags)
+			{
+				blk->at("Tags").append({ tag });
+				blk->insert({ {tag, json::empty_array} });
+			}
+
+			for (size_t i{ 0 }; i < num_values; ++i)
+			{
+				size_t tag_i = i % num_tags;
+				blk->at(tags[tag_i]).append({ std::move(values[i]) });
+			}
+
+			create_loop(tags);
+			return true;
+		}
+
+		bool create_loop(const std::vector<dataname>& loop_tags)
+		{
+			auto& Tags = blk->at("Tags").get_array();
 
 			//Do I have all the tags that I want to loop together?
 			bool all_there = std::all_of(loop_tags.cbegin(), loop_tags.cend(), [&Tags](const dataname& tag)
@@ -96,6 +100,7 @@ namespace row::cif {
 				});
 			if (!all_there) return false; // No, I don't
 			// Yes, I do.
+
 
 			//move all tags in Tags to be together with the first tag to appear in Tags
 			auto firstTag = std::find_if(Tags.begin(), Tags.end(), [&loop_tags](const jsonvalue& tag)
@@ -109,8 +114,8 @@ namespace row::cif {
 				});
 
 
-			//remove all tags from anything in Loops
-			auto& Loops = blk.at("Loops").get_array();
+			//remove all tags from anything already in Loops
+			auto& Loops = blk->at("Loops").get_array();
 
 			for(auto& loop : Loops){
 				for (const auto& tag : loop_tags)
@@ -120,60 +125,44 @@ namespace row::cif {
 				}
 			}
 
-			//remove empty arrays
+			//remove empty arrays in Loops
+			auto it = std::remove_if(Loops.begin(), Loops.end(), [](const auto& arr) 
+				{
+					return arr.get_array().empty();
+				});
+			Loops.erase(it, Loops.end());
 
 
 			//put them all together in the last entry in Loops
-
-			return true;
-
-		}
-
-
-		bool add_loop_dataitem(dataname tag, std::vector<datavalue> values)
-		{
-			if (already_has(tag))
+			for (const auto& tag : loop_tags)
 			{
-				return false;
+				blk->at("Loops").append({ tag });
 			}
+			
 
-			blk.at("Tags").append({ tag });
-			blk.insert({ {tag, values} });
 			return true;
+
 		}
 
-		bool append_datavalue(const dataname& tag, datavalue value)
+		std::string json_datavalue(const dataname& tag) const
+		{
+			return json::to_string(blk->at(tag));
+		}
+
+		//reorder tags
+		//reorder loops
+		//reorder tags in loops
+		//output in CIF format
+
+		//The tao::json::value::find() function can only be called with a std::size_t or a std::string for Arrays and Objects, 
+		//	respectively.It returns a plain pointer to the sub - value, or nullptr when no matching entry was found.As usual 
+		//	there are both a const overload that returns a const value*, and a non - const overload that returns a value * .
+
+		[[nodiscard]] bool already_has(const dataname& tag) const
 		{
 			// todo: convert tag to unicode canonical lower-case
-			if (!already_has(tag))
-			{
-				return false;
-			}
-
-			blk.at(tag).append({ value });
-			return true;
+			return blk->find(tag) != nullptr;
 		}
-
-		bool append_datavalues(const dataname& tag, std::vector<datavalue> values)
-		{
-			// todo: convert tag to unicode canonical lower-case
-			if (!already_has(tag))
-			{
-				return false;
-			}
-
-			blk.at(tag).append({ values });
-			return true;
-		}
-
-		bool already_has(dataname tag)
-		{
-			// todo: convert tag to unicode canonical lower-case
-			auto begin = blk.at("Tags").get_array().begin();
-			auto end = blk.at("Tags").get_array().end();
-			return std::find(begin, end, tag) != end;			
-		}
-
 	};
 
 
@@ -184,19 +173,51 @@ namespace row::cif {
 					 { "Metadata", {
 						  { "schema-name", "ROW-CIF-JSON" },
 						  { "schema-version", "0.0.1" },
-					 }
-				   }
+					      }
+					 },
+					 { "Blocks", tao::json::empty_array }
 		};
+		block* curr_block{ nullptr };
 
 		Cif() = default;
 
-		explicit Cif(std::string version)
+		void set_version(std::string version)
 		{
-			file.at("Metadata").insert({ {"version", std::move(version)} });
+			if(file.at("Metadata").find("version"))
+			{
+				file.at("Metadata").at("version") = std::move(version);
+			}
+			else
+			{
+				file.at("Metadata").insert({ {"version", std::move(version)} });
+			}
+		}
+
+		Block add_block(const containercode& name)
+		{
+			file.at("Blocks").append({ name });
+			file.insert({ {name, json::empty_object} });
+			curr_block = &file.at(name);
+			curr_block->insert({
+					 { "Tags", json::empty_array },
+					 { "Loops", json::empty_array },
+					 { "Frames", json::empty_array }
+				});
+
+			return Block(curr_block);
 		}
 		
+		Block get_block(const containercode& name)
+		{
+			curr_block = &file.at(name);
+			return Block(curr_block);
+		}
 
-
+		bool already_has(const containercode& name)
+		{
+			// todo: convert name to unicode canonical lower-case
+			return file.find(name) != nullptr;
+		}
 	};
 
 

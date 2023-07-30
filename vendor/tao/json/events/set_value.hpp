@@ -136,7 +136,7 @@ namespace tao::json::events
 
       void reset()
       {
-          value_.set_uninitialized();
+          value_.set_uninitialized(); //todo: actually remove the contents from the various bits and bobs
           stack_.clear();
           keys_.clear();
       }

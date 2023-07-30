@@ -171,8 +171,9 @@ namespace row::cif::rules
 	struct loop : pegtl::if_must<loop_begin, loop_data_names, loop_data_values, loop_end> {};
 
     //Data
-	struct ec_list_missing_open : pegtl::one<']'> {};;
-	struct ec_extra_data_values : pegtl::plus<pegtl::sor<value, ec_list_missing_open>, pegtl::star<whitespace>> {};
+	struct ec_list_missing_open : pegtl::one<']'> {};
+	struct ec_extra_data_value : value {};
+	struct ec_extra_data_values : pegtl::plus<pegtl::sor<ec_extra_data_value, ec_list_missing_open>, pegtl::star<whitespace>> {};
 	struct ec_multiple_data_name : data_name {};
 	struct ec_multiple_data_names : pegtl::seq<ec_multiple_data_name, pegtl::star<whitespace, ec_multiple_data_name>> {};
 
@@ -198,7 +199,9 @@ namespace row::cif::rules
 	struct data_block : pegtl::if_must<data_heading, whitespace, pegtl::star<block_content>> {};
 
     //CIF2 file
-    struct magic_code : TAO_PEGTL_STRING("#\\#CIF_2.0") {};
+	struct magic_code_prefix : TAO_PEGTL_STRING("#\\#CIF_") {};
+	struct magic_code_version : TAO_PEGTL_STRING("2.0") {};
+    struct magic_code : pegtl::seq<magic_code_prefix, magic_code_version> {};
     struct file_heading : pegtl::seq<pegtl::opt<pegtl8::bom>, magic_code, pegtl::star<ws>> {};
     struct CIF2_file : pegtl::if_must<file_heading, pegtl::opt<pegtl::eol, 
 			                                                    pegtl::opt<pegtl::opt<whitespace>,
