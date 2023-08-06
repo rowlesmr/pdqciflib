@@ -987,6 +987,7 @@ namespace row::cif::actions
 				buffer.curr_block = cif.add_block(buffer.content);
 			}
 			std::cout << "data_heading: |" << in.string() << "| (" << buffer.content << ")\n";
+			buffer.content.clear();
 		}
 	};
 

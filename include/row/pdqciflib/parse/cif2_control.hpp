@@ -6,8 +6,6 @@
 #include <stdexcept>
 #include "tao/pegtl.hpp"
 
-//#include "ciffile.hpp"
-//#include "cifexcept.hpp"
 #include "cif2_rules.hpp"
 
 

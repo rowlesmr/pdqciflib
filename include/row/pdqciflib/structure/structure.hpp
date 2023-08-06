@@ -22,10 +22,42 @@ namespace row::cif {
 	using cif =  json::value;
 
 
+
+
+
+	//datavalue make_string_value(std::string val)
+	//{
+	//	return { val };
+	//}
+
+	//datavalue make_list_value(const std::vector<std::string>& vals)
+	//{
+	//	tao::json::events::to_value build_value;
+	//	build_value.begin_array();
+	//	for(auto val : vals)
+	//	{
+	//		build_value.string(val);
+	//		build_value.element();
+	//	}
+	//	return build_value.value;
+	//}
+
+	//datavalue make_loop_values(const std::vector<std::string>& vals)
+	//{
+	//	return make_list_value(vals);
+	//}
+
+
+
+
 	class Block
 	{
 	private:
 		block* blk{ nullptr };
+
+		static const size_t npos = -1;
+
+
 
 	public:
 
@@ -102,16 +134,22 @@ namespace row::cif {
 			// Yes, I do.
 
 
-			//move all tags in Tags to be together with the first tag to appear in Tags
-			auto firstTag = std::find_if(Tags.begin(), Tags.end(), [&loop_tags](const jsonvalue& tag)
-				{
-					return std::find(loop_tags.cbegin(), loop_tags.cend(), tag) != loop_tags.cend();
-				});
 
-			std::stable_partition(firstTag, Tags.end(), [&loop_tags](const jsonvalue& tag)
+			//group all tags together in the given loop order, from the position of the first loop tag
+			auto first_loop_tag = std::find(Tags.begin(), Tags.end(), loop_tags[0]);
+
+			//partition the elements that may exist prior to the first_loop_tag
+			// need to negate the first predicate, as I want the matches to be at the end of the partition.
+			// so that when I partition the other half of the vector, the elements I want are grouped together.
+			auto first_loop_it = std::stable_partition(Tags.begin(), first_loop_tag, [&loop_tags](const jsonvalue& tag)
+				{
+					return std::find(loop_tags.cbegin(), loop_tags.cend(), tag) == loop_tags.cend();
+				});
+			std::stable_partition(first_loop_tag, Tags.end(), [&loop_tags](const jsonvalue& tag)
 				{
 					return std::find(loop_tags.cbegin(), loop_tags.cend(), tag) != loop_tags.cend();
 				});
+			std::copy(loop_tags.begin(), loop_tags.end(), first_loop_it);
 
 
 			//remove all tags from anything already in Loops
@@ -134,14 +172,15 @@ namespace row::cif {
 
 
 			//put them all together in the last entry in Loops
+			blk->at("Loops").append({ json::empty_array });
+			size_t last_array = blk->at("Loops").get_array().size() - 1;
 			for (const auto& tag : loop_tags)
 			{
-				blk->at("Loops").append({ tag });
+				blk->at("Loops")[last_array].append({ tag });
 			}
 			
 
 			return true;
-
 		}
 
 		std::string json_datavalue(const dataname& tag) const
@@ -152,11 +191,13 @@ namespace row::cif {
 		//reorder tags
 		//reorder loops
 		//reorder tags in loops
+		
+		
 		//output in CIF format
 
-		//The tao::json::value::find() function can only be called with a std::size_t or a std::string for Arrays and Objects, 
-		//	respectively.It returns a plain pointer to the sub - value, or nullptr when no matching entry was found.As usual 
-		//	there are both a const overload that returns a const value*, and a non - const overload that returns a value * .
+
+
+
 
 		[[nodiscard]] bool already_has(const dataname& tag) const
 		{
