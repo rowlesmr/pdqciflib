@@ -5,14 +5,11 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include <stdexcept>
 #include <vector>
 #include "tao/pegtl.hpp"
 #include "tao/json.hpp"
 
-//#include "ciffile.hpp"
-//#include "cifexcept.hpp"
-#include "cif2_rules.hpp"
+
 #include "../structure/structure.hpp"
 
 namespace row::cif::states
@@ -21,7 +18,6 @@ namespace row::cif::states
 	namespace pegtl = tao::pegtl;
 	namespace pegtl8 = tao::pegtl::utf8;
 	namespace json = tao::json;
-	namespace rules = row::cif::rules;
 
 
 	struct ErrorCorrection
@@ -60,6 +56,7 @@ namespace row::cif::states
 		std::string curr_tag{};
 		
 		std::string content{};
+		std::string fsc_prefix{};
 		std::vector<ErrorCorrection> errors{};
 
 		pegtl::position value_position;
@@ -110,6 +107,7 @@ namespace row::cif::states
 		void reset_value()
 		{
 			content.clear();
+			fsc_prefix.clear();
 			value_position.byte = 0;
 			value_position.column = 0;
 			value_position.line = 0;

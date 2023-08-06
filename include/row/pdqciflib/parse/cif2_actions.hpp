@@ -15,7 +15,6 @@
 //#include "cifexcept.hpp"
 #include "cif2_rules.hpp"
 #include "cif2_states.hpp"
-#include "cif2_states.hpp"
 #include "..\structure\structure.hpp"
 
 namespace row::cif::actions
@@ -166,6 +165,9 @@ namespace row::cif::actions
 		RpcStringFreeA((RPC_CSTR*)&id);
 		return uuid_str;
 	}
+
+
+
 
 	/********************
 	 Parsing Actions to populate the values in the ciffile
@@ -385,11 +387,38 @@ namespace row::cif::actions
 		}
 	};
 
-	template<> struct action<rules::sc_text_field>
+	template<> struct action<rules::fsc_first_prefix_text>
 	{
 		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
 		{
-			std::cout << "sc_text_field: |" << in.string() << "|\n";
+			buffer.fsc_prefix = in.string();
+			std::cout << "fsc_first_prefix_text: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::fsc_text>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
+		{
+			buffer.content += in.string();
+			std::cout << "fsc_text: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::fsc_line_without_continuation>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
+		{
+			buffer.content += '\n';
+			std::cout << "fsc_line_without_continuation: |" << in.string() << "|\n";
+		}
+	};
+
+	template<> struct action<rules::text_field>
+	{
+		template<typename Input> static void apply(const Input& in, [[maybe_unused]] Cif& cif, [[maybe_unused]] states::Buffer& buffer)
+		{
+			std::cout << "text_field: |" << in.string() << "|\n";
 		}
 	};
 

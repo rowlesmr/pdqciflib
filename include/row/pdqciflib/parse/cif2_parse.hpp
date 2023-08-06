@@ -6,10 +6,11 @@
 #include <stdexcept>
 #include "tao/pegtl.hpp"
 
-#include "cif2_rules.hpp"
-#include "cif2_actions.hpp"
 #include "cif2_control.hpp"
 #include "..\structure\structure.hpp"
+
+#include "cif2_rules.hpp"
+#include "cif2_actions.hpp"
 
 namespace row::cif
 {

@@ -5,8 +5,9 @@
 #include <stdexcept>
 #include "tao/pegtl.hpp"
 
-//#include "ciffile.hpp"
-//#include "cifexcept.hpp"
+
+#include "cif2_states.hpp"
+#include "..\structure\structure.hpp"
 
 namespace row::cif::rules
 {
@@ -59,30 +60,49 @@ namespace row::cif::rules
 	struct ws_or_eof : pegtl::sor<whitespace, pegtl::eof> {};
 
     //text block
+	// plain semicolon-delimited text-field
 	struct sc_text_delim_open : pegtl::seq<pegtl::bol, pegtl::one<';'>> {};
 	struct sc_text_delim_close : pegtl::seq<pegtl::eol, pegtl::one<';'>> {};
 	struct sc_text_content : pegtl::star<pegtl::not_at<sc_text_delim_close>, allchars> {};
-	struct sc_text_field : pegtl::if_must<sc_text_delim_open, sc_text_content, sc_text_delim_close> {};
 
+	// fancy, text-prefix, line-folded, semicolon-delimited text-field
+	struct fsc_prefix_text
+	{
+		using rule_t = fsc_prefix_text;
 
+		template< pegtl::apply_mode,
+			pegtl::rewind_mode,
+			template< typename... >
+		class Action,
+			template< typename... >
+		class Control,
+			typename ParseInput,
+			typename... States >
+		static bool match(ParseInput& in, [[maybe_unused]] row::cif::Cif& cif, row::cif::states::Buffer& buffer)
+		{
+			if (in.size(buffer.fsc_prefix.size()) >= buffer.fsc_prefix.size())
+			{
+				if (std::memcmp(in.current(), buffer.fsc_prefix.data(), buffer.fsc_prefix.size()) == 0)
+				{
+					in.bump(buffer.fsc_prefix.size());
+					return true;
+				}
+			}
+			return false;
+		}
+	};
+	//TAO_PEGTL_STRING("prefix:")
+	struct fsc_continuation : pegtl::seq<pegtl::one<'\\'>, pegtl::star<ws>, pegtl::eol> {};
+	struct fsc_first_prefix_text : pegtl::star<pegtl::seq<pegtl::not_at <fsc_continuation>, char_>> {};  
+	struct fsc_first_prefix : pegtl::seq<fsc_first_prefix_text, fsc_continuation> {};
+	struct fsc_text : pegtl::star<pegtl::seq<pegtl::not_at<pegtl::sor<sc_text_delim_close, fsc_continuation, pegtl::eol>>, char_>> {};
+	struct fsc_line_with_continuation : fsc_continuation {};
+	struct fsc_line_without_continuation : pegtl::eol {};
+	struct fsc_final_line : pegtl::at<sc_text_delim_close> {};
+	struct fsc_prefix_line : pegtl::seq<pegtl::bol, fsc_prefix_text, fsc_text, pegtl::sor<fsc_final_line, fsc_line_with_continuation, fsc_line_without_continuation>> {};
+	struct fsc_prefix_text_content : pegtl::seq<fsc_first_prefix, pegtl::star<fsc_prefix_line>> {};
 
-	//rules for folded semicolon textfields
-	struct f_text_continuation : pegtl::seq<pegtl::one<'\\'>, pegtl::star<ws>, pegtl::eol> {};
-	struct f_text_delim_open : pegtl::seq<sc_text_delim_open, f_text_continuation> {};
-	struct f_text_delim_close : sc_text_delim_close {};
-	struct f_text_content_for_parsing : sc_text_content {};
-	struct folded_text_field : pegtl::if_must<f_text_delim_open, f_text_content_for_parsing, f_text_delim_close> {};
-
-
-	struct fsctf_text : pegtl::plus<pegtl::not_at<f_text_continuation>, allchars> {};
-	struct fsctf_line_without_continuation : fsctf_text {};
-	struct fsctf_line_with_continuation : pegtl::seq<fsctf_text, f_text_continuation> {};
-	struct fsctf_grammar : pegtl::seq<pegtl::star<pegtl::plus<fsctf_line_with_continuation>, pegtl::star<fsctf_line_without_continuation>>, fsctf_line_without_continuation> {};
-
-
-	struct text_field : sc_text_field {};
-
-
+	struct text_field : pegtl::if_must<sc_text_delim_open, pegtl::sor<fsc_prefix_text_content, sc_text_content>, sc_text_delim_close> {};
 
     //triple-quote block
 	struct ec_triple_close_quote : pegtl::success {};
