@@ -187,106 +187,107 @@ namespace pegtl8 = tao::pegtl::utf8;
 int main() {
 	
 
+////	std::string str{
+////		R"(;prefix:\
+////prefix:This is a short line.
+////prefix:This is a long\
+////prefix:Spaces.
+////;)"
+////	};
 //	std::string str{
-//		R"(;prefix:\
+//		R"(#\#CIF_2.0
+//data_blockname
+//
+//_scdtf_tag
+//
+//
+//
+//;prefix:\
 //prefix:This is a short line.
 //prefix:This is a long\
+//prefix: line and should all \
+//prefix:be on one line.
+//prefix:There are some
+//prefix:lines without
+//prefix:continuation markers.
+//prefix:\
+//prefix:\
+//prefix:
+//prefix: This, and the next line, \
+//prefix:start with spaces.
+//prefix: Here are \ embedded \'s to confuse
+//prefix:And\
+//prefix:Others\
+//prefix:With\    
+//prefix:No\
 //prefix:Spaces.
 //;)"
 //	};
-	std::string str{
-		R"(;prefix:\
-prefix:This is a short line.
-prefix:This is a long\
-prefix: line and should all \
-prefix:be on one line.
-prefix:There are some
-prefix:lines without
-prefix:continuation markers.
-prefix:\
-prefix:\
-prefix:
-prefix: This, and the next line, \
-prefix:start with spaces.
-prefix: Here are \ embedded \'s to confuse
-prefix:And\
-prefix:Others\
-prefix:With\    
-prefix:No\
-prefix:Spaces.
-;)"
-	};
-
-		std::string result {
-R"(This is a short line.
-This is a long line and should all be on one line.
-There are some
-lines without
-continuation markers.
-
- This, and the next line, start with spaces.
- Here are \ embedded \'s to confuse
-AndOthersWithNoSpaces.)"
-		};
-
-
-
-//#define TRACER
-//#define ANALYZE
-
-
-#ifdef ANALYZE
-		const std::size_t issues = tao::pegtl::analyze<text_field>(1);
-		std::cout << issues << '\n';
-#endif
-
-		pegtl::string_input<pegtl::tracking_mode::eager, pegtl::eol::lf_crlf> in(str, "string");
-		try
-		{
-			row::cif::Cif cif{};
-			row::cif::states::Buffer buffer{};
-
-#ifdef TRACER
-			tao::pegtl::tracer<tao::pegtl::tracer_traits<true, true, true>> tr(in);
-			tr.parse< row::cif::rules::text_field, row::cif::actions::action, tao::pegtl::normal>(in, cif, buffer);
-			std::cout << "\n###\n";
-#endif
-
-			tao::pegtl::parse< row::cif::rules::text_field, row::cif::actions::action >(in, cif, buffer);
-
-			std::cout << buffer.content << '\n';
-			std::cout << (buffer.content == result) << '\n';
-			
-		}
-		catch (pegtl::parse_error& e)
-		{
-			const auto p = e.positions().front();
-			//pretty-print the error msg and the line that caused it, with an indicator at the token that done it.
-			std::cerr << e.what() << '\n'
-				<< in.line_at(p) << '\n'
-				<< std::setw(p.column) << '^' << std::endl;
-			//throw std::runtime_error("Parsing error -> " + std::string(e.what()));
-			return 1;
-		}
-
-	
-
-	return 0;
+//
+//
+//
+////#define TRACER
+////#define ANALYZE
+//
+//
+//#ifdef ANALYZE
+//		const std::size_t issues = tao::pegtl::analyze<text_field>(1);
+//		std::cout << issues << '\n';
+//#endif
+//
+//		pegtl::string_input<pegtl::tracking_mode::eager, pegtl::eol::lf_crlf> in(str, "string");
+//		try
+//		{
+//			row::cif::Cif cif{};
+//			row::cif::states::Buffer buffer{};
+//
+//#ifdef TRACER
+//			tao::pegtl::tracer<tao::pegtl::tracer_traits<true, true, true>> tr(in);
+//			tr.parse< row::cif::rules::text_field, row::cif::actions::action, tao::pegtl::normal>(in, cif, buffer);
+//			std::cout << "\n###\n";
+//#endif
+//
+//			tao::pegtl::parse< row::cif::rules::CIF2_file, row::cif::actions::action >(in, cif, buffer);
+//
+//			std::cout << std::setw(2) << cif.file << '\n';
+//			
+//			
+//		}
+//		catch (pegtl::parse_error& e)
+//		{
+//			const auto p = e.positions().front();
+//			//pretty-print the error msg and the line that caused it, with an indicator at the token that done it.
+//			std::cerr << e.what() << '\n'
+//				<< in.line_at(p) << '\n'
+//				<< std::setw(p.column) << '^' << std::endl;
+//			//throw std::runtime_error("Parsing error -> " + std::string(e.what()));
+//			return 1;
+//		}
+//
+//	
+//
+//	return 0;
+//
 
 
 
 
+	row::cif::Cif cif{};
+	cif.set_version("2.0");
+	row::cif::Block blk = cif.add_block("block1");
 
-	//row::cif::Cif cif{};
-	//cif.set_version("2.0");
-	//row::cif::Block blk = cif.add_block("block1");
+	blk.add_dataitem("_taga", "one");
+	blk.add_dataitem("_tagb", "two");
+	blk.add_dataitem("_tagc", "three");
+	blk.add_dataitem("_tagd", "four");
+	blk.add_dataitem("_tage", "five");
+	blk.add_dataitem("_tagf", "six");
+	blk.add_dataitem("_tagg", "seven");
+	blk.add_dataitem("_tagh", "eight");
 
-	//blk.add_dataitem("_tag1", "hello");
-	//blk.add_dataitem("_tag2", "there");
-	//blk.add_dataitem("_tag3", "world");
-	//blk.add_dataitem("_tag3", "three");
+	blk.create_loop({ "_tage", "_tagg", "_tagb" });
 
-
+	blk.create_loop({ "_tagb", "_tagc", "_taga" });
 
 	//std::vector<std::string> looptags {"_tagl4", "_tagl5", "_tagl6"};
 	//std::vector< tao::json::value> loopvals {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
@@ -295,10 +296,10 @@ AndOthersWithNoSpaces.)"
 
 
 
-	//std::cout << tao::json::to_string(cif.file, 3) << '\n';
+	std::cout << tao::json::to_string(cif.file, 3) << '\n';
 
 
-	//return 0;
+	return 0;
 
 //	const std::size_t issues = tao::pegtl::analyze< row::cif::rules::CIF2_file >(1);
 //	std::cout << issues << '\n';
